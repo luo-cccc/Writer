@@ -3906,6 +3906,19 @@ struct MemorySummaryQuality {
     canon_sparse_count: usize,
 }
 
+#[derive(Debug, Default)]
+struct MemoryRegressionWindowRisk {
+    risk_level: &'static str,
+    risk_score: usize,
+    summary_avg_chars: usize,
+    summary_max_chars: usize,
+    summary_overweight: usize,
+    summary_canon_sparse: usize,
+    candidate_max_per_chapter: usize,
+    candidate_target_per_chapter: usize,
+    warnings: Vec<String>,
+}
+
 fn recent_memory_summary_quality(_root: &Path, paths: &[PathBuf]) -> Result<MemorySummaryQuality> {
     let mut quality = MemorySummaryQuality::default();
     let mut total_chars = 0usize;
@@ -9074,6 +9087,39 @@ fn memory_regression_report(root: &Path, window: u32, write: bool) -> Result<Str
         "- candidate_updates: {}\n",
         graph.candidate_updates.len()
     );
+    if let Ok(summary) = workspace_summary(root) {
+        let _ = writeln!(
+            out,
+            "- workflow_gate: {}{}",
+            summary.readiness.quality_gate,
+            if summary.readiness.blocked {
+                " (blocked)"
+            } else {
+                ""
+            }
+        );
+        let _ = writeln!(out, "- next_action: {}", summary.readiness.next_action);
+        let _ = writeln!(
+            out,
+            "- context_score: {}",
+            summary
+                .readiness
+                .context_score
+                .map(|score| format!("{score}/100"))
+                .unwrap_or_else(|| "n/a".to_string())
+        );
+        let _ = writeln!(
+            out,
+            "- late_memory_pressure: pending {}, recent {}, max/chapter {}, summary avg {}, max {}, overlong {}, canon sparse {}\n",
+            summary.readiness.pending_candidates,
+            summary.readiness.candidate_pressure_total,
+            summary.readiness.candidate_pressure_max_per_chapter,
+            summary.readiness.recent_summary_avg_chars,
+            summary.readiness.recent_summary_max_chars,
+            summary.readiness.recent_summary_overweight,
+            summary.readiness.recent_summary_canon_sparse
+        );
+    }
     out.push_str("This deterministic report checks coverage and continuity surfaces before deeper RLM review.\n\n");
 
     let mut start_index = 0usize;
@@ -9146,6 +9192,8 @@ fn append_regression_window(
                 .is_some_and(|chapter| chapter_set.contains(&chapter))
         })
         .collect::<Vec<_>>();
+    let candidate_max_per_chapter =
+        regression_candidate_max_per_chapter(chapters, candidates.iter().copied());
     let active_promises = graph
         .nodes
         .iter()
@@ -9193,6 +9241,15 @@ fn append_regression_window(
         .count();
     let anchor_candidates = regression_anchor_candidates(graph, &chapter_set);
     let carry = score_anchor_carry_for_chapters(root, chapters, &anchor_candidates)?;
+    let risk = regression_window_risk(
+        root,
+        chapters,
+        missing_summaries.len(),
+        missing_audits.len(),
+        candidates.len(),
+        candidate_max_per_chapter,
+        &carry,
+    )?;
 
     let _ = writeln!(
         out,
@@ -9213,6 +9270,24 @@ fn append_regression_window(
         out,
         "- anchor_carry: anchors {}, mentioned {}, carried {}, rate {:.2}",
         carry.anchor_count, carry.mentioned_count, carry.carried_count, carry.carry_rate
+    );
+    let _ = writeln!(
+        out,
+        "- regression_risk: {} (score {})",
+        risk.risk_level, risk.risk_score
+    );
+    let _ = writeln!(
+        out,
+        "- summary_density: avg {}, max {}, overlong {}, canon_sparse {}",
+        risk.summary_avg_chars,
+        risk.summary_max_chars,
+        risk.summary_overweight,
+        risk.summary_canon_sparse
+    );
+    let _ = writeln!(
+        out,
+        "- candidate_pressure: max/chapter {}, target/chapter {}",
+        risk.candidate_max_per_chapter, risk.candidate_target_per_chapter
     );
 
     if !missing_summaries.is_empty() {
@@ -9274,8 +9349,123 @@ fn append_regression_window(
             let _ = writeln!(out, "  - {}: {mode}{terms}", item.anchor);
         }
     }
+    if !risk.warnings.is_empty() {
+        out.push_str("- regression warnings:\n");
+        for warning in risk.warnings.iter().take(8) {
+            let _ = writeln!(out, "  - {warning}");
+        }
+    }
     out.push_str("- gates: knowledge-boundary scan, promise carry/payoff scan, event timeline order, relationship/state deltas\n\n");
     Ok(())
+}
+
+fn regression_window_risk(
+    root: &Path,
+    chapters: &[u32],
+    missing_summaries: usize,
+    missing_audits: usize,
+    pending_candidates: usize,
+    candidate_max_per_chapter: usize,
+    carry: &AnchorCarryWindowReport,
+) -> Result<MemoryRegressionWindowRisk> {
+    let summary_paths = chapters
+        .iter()
+        .map(|chapter| {
+            root.join("memory/summaries")
+                .join(format!("{chapter:03}.md"))
+        })
+        .filter(|path| path.is_file())
+        .collect::<Vec<_>>();
+    let summary_quality = recent_memory_summary_quality(root, &summary_paths)?;
+    let weak_anchor_count = carry.weak_items.len();
+    let mut score = missing_summaries * 8
+        + missing_audits * 6
+        + pending_candidates * 2
+        + weak_anchor_count * 5
+        + summary_quality.overweight_count * 6
+        + summary_quality.canon_sparse_count * 5;
+    if candidate_max_per_chapter > MEMORY_CANDIDATE_TARGET_MAX_PER_CHAPTER {
+        score += (candidate_max_per_chapter - MEMORY_CANDIDATE_TARGET_MAX_PER_CHAPTER) * 4;
+    }
+    if carry.anchor_count > 0 && carry.carry_rate < 0.5 {
+        score += 10;
+    }
+
+    let risk_level = if score >= 40 {
+        "high"
+    } else if score >= 18 {
+        "medium"
+    } else if score > 0 {
+        "low"
+    } else {
+        "clean"
+    };
+    let mut warnings = Vec::new();
+    if missing_summaries > 0 {
+        warnings.push(format!(
+            "{missing_summaries} chapter(s) missing memory summaries"
+        ));
+    }
+    if missing_audits > 0 {
+        warnings.push(format!("{missing_audits} chapter(s) missing audit reports"));
+    }
+    if pending_candidates > 0 {
+        warnings.push(format!(
+            "{pending_candidates} pending candidate memory update(s)"
+        ));
+    }
+    if candidate_max_per_chapter > MEMORY_CANDIDATE_TARGET_MAX_PER_CHAPTER {
+        warnings.push(format!(
+            "candidate pressure exceeds target: max {candidate_max_per_chapter}, target {}",
+            MEMORY_CANDIDATE_TARGET_MAX_PER_CHAPTER
+        ));
+    }
+    if summary_quality.overweight_count > 0 {
+        warnings.push(format!(
+            "{} summary file(s) exceed {} chars",
+            summary_quality.overweight_count, MEMORY_SUMMARY_OVERWEIGHT_CHARS
+        ));
+    }
+    if summary_quality.canon_sparse_count > 0 {
+        warnings.push(format!(
+            "{} summary file(s) lack enough canon sections",
+            summary_quality.canon_sparse_count
+        ));
+    }
+    if weak_anchor_count > 0 {
+        warnings.push(format!(
+            "{weak_anchor_count} anchor(s) mentioned without durable carry"
+        ));
+    }
+
+    Ok(MemoryRegressionWindowRisk {
+        risk_level,
+        risk_score: score,
+        summary_avg_chars: summary_quality.avg_chars,
+        summary_max_chars: summary_quality.max_chars,
+        summary_overweight: summary_quality.overweight_count,
+        summary_canon_sparse: summary_quality.canon_sparse_count,
+        candidate_max_per_chapter,
+        candidate_target_per_chapter: MEMORY_CANDIDATE_TARGET_MAX_PER_CHAPTER,
+        warnings,
+    })
+}
+
+fn regression_candidate_max_per_chapter<'a>(
+    chapters: &[u32],
+    candidates: impl Iterator<Item = &'a MemoryUpdateCandidate>,
+) -> usize {
+    let chapter_set = chapters.iter().copied().collect::<BTreeSet<_>>();
+    let mut counts = BTreeMap::<u32, usize>::new();
+    for candidate in candidates {
+        let Some(chapter) = candidate.chapter else {
+            continue;
+        };
+        if chapter_set.contains(&chapter) {
+            *counts.entry(chapter).or_default() += 1;
+        }
+    }
+    counts.values().copied().max().unwrap_or(0)
 }
 
 #[derive(Debug, Clone, Default)]
@@ -14394,6 +14584,12 @@ mod tests {
         assert!(regression.contains("## Chapters 003-004"));
         assert!(regression.contains("active_promises"));
         assert!(regression.contains("anchor_carry:"));
+        assert!(regression.contains("workflow_gate:"));
+        assert!(regression.contains("late_memory_pressure:"));
+        assert!(regression.contains("regression_risk:"));
+        assert!(regression.contains("summary_density:"));
+        assert!(regression.contains("candidate_pressure:"));
+        assert!(regression.contains("regression warnings:"));
         assert!(regression.contains("weak anchors:"));
         assert!(regression.contains("旧城铃声"));
         assert!(regression.contains("Every 10 chapters"));

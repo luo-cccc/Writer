@@ -131,6 +131,9 @@ main path:
   LLM outputs no candidates while durable changes are visible, a deterministic
   fallback extracts conservative candidates from the summary/chapter text.
 - `memory apply` is the only path that writes durable ledgers.
+- `memory regression N` reports each N-chapter window with workflow gate,
+  candidate pressure, summary density, anchor carry, active promises, and
+  regression warnings for 10/20/50-chapter review.
 
 The legacy `deepseek novel ...` namespace remains available for compatibility,
 but it is no longer the main product path.
@@ -282,8 +285,6 @@ that the command chain, API integration, and deterministic gates run.
 2. Expand failure/non-trigger fixtures for `style_ai_opening`,
    `xianxia_resource_anchor`, `xianxia_dialogue_voice`, combat observation chain,
    viewpoint leakage, and targeted revision.
-3. Add richer reporting for `memory regression` windows so every 10/20/50 chapters
-   can surface character, promise, timeline, and knowledge-boundary drift.
-4. Build the dedicated TUI Novel Studio workspace.
-5. Only after the above, run long-form real validation and report capability
+3. Build the dedicated TUI Novel Studio workspace.
+4. Only after the above, run long-form real validation and report capability
    using measured breakdown rates, not optimistic word-count claims.
