@@ -198,6 +198,8 @@ Resource support currently includes:
 - resource/economy quality signals
 - resource obligation checks
 - `memory resource-ledger`
+- applied resource entries in `memory/resources.jsonl` with source, owner,
+  quantity/state, obligation, transfer/loss, evidence, and affected nodes
 - graph-based impact hints for objects/resources
 
 This is not yet a complete double-entry resource-accounting system.
@@ -270,9 +272,9 @@ that the command chain, API integration, and deterministic gates run.
 - The repository directory currently has no `.git` metadata, so local change
   review cannot rely on `git diff` unless the project is restored into a Git
   checkout.
-- Resource impact is still partly heuristic. It uses resource cards, graph edges,
-  object-state candidates, and textual obligation signals, but it is not a full
-  resource ledger with exact balances and downstream propagation.
+- Resource impact now has a reviewable ledger surface, but source/owner/quantity
+  extraction from prose remains heuristic and it is not a full double-entry
+  balance system with exact downstream propagation.
 - Quality gates catch defined failure modes. They do not replace real manuscript
   review.
 - The dedicated full TUI workspace remains the next UI layer: project tree,
@@ -280,11 +282,9 @@ that the command chain, API integration, and deterministic gates run.
 
 ## Next Work
 
-1. Harden resource impact into a stricter resource ledger: source, owner,
-   quantity/state, obligation, transfer, loss, and affected nodes.
-2. Expand failure/non-trigger fixtures for `style_ai_opening`,
+1. Expand failure/non-trigger fixtures for `style_ai_opening`,
    `xianxia_resource_anchor`, `xianxia_dialogue_voice`, combat observation chain,
    viewpoint leakage, and targeted revision.
-3. Build the dedicated TUI Novel Studio workspace.
-4. Only after the above, run long-form real validation and report capability
+2. Build the dedicated TUI Novel Studio workspace.
+3. Only after the above, run long-form real validation and report capability
    using measured breakdown rates, not optimistic word-count claims.

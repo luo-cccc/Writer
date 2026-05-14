@@ -614,6 +614,22 @@ struct MemoryUpdateCandidate {
     applied_at: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+struct ResourceLedgerEntry {
+    chapter: Option<u32>,
+    resource: String,
+    event: String,
+    source: String,
+    owner: String,
+    quantity_state: String,
+    obligation: String,
+    transfer: String,
+    loss: String,
+    affected_nodes: Vec<String>,
+    evidence: String,
+    confidence: f32,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum QualitySeverity {
     Blocker,
@@ -1137,6 +1153,7 @@ fn init_project(
     write_text(&workspace.join("memory/events.jsonl"), "", force)?;
     write_text(&workspace.join("memory/foreshadowing.jsonl"), "", force)?;
     write_text(&workspace.join("memory/behavior.jsonl"), "", force)?;
+    write_text(&workspace.join("memory/resources.jsonl"), "", force)?;
     write_text(&workspace.join("eval/README.md"), EVAL_README, force)?;
     write_text(
         &workspace.join("eval/rubrics/quality_signals.md"),
@@ -5578,6 +5595,7 @@ fn memory_graph_source_paths(root: &Path) -> Vec<PathBuf> {
         "memory/facts.jsonl",
         "memory/events.jsonl",
         "memory/foreshadowing.jsonl",
+        "memory/resources.jsonl",
         "memory/candidates",
         "memory/archives",
     ]
@@ -5837,6 +5855,7 @@ fn resource_ledger_report(root: &Path, chapter: Option<u32>) -> Result<String> {
 fn resource_ledger_section(root: &Path, chapter: Option<u32>) -> Result<String> {
     let graph = load_or_build_memory_graph(root)?;
     let candidates = memory_candidates_for_display(root, chapter, true)?;
+    let ledger_entries = resource_ledger_entries(root, chapter, &graph, &candidates)?;
     let mut out = String::new();
     out.push_str("## Resource Economy Impact\n\n");
     let resources = graph
@@ -5859,6 +5878,45 @@ fn resource_ledger_section(root: &Path, chapter: Option<u32>) -> Result<String> 
                 out,
                 "  - {} | value: {} | controller: {} | cost: {}",
                 resource.label, value, controller, cost
+            );
+        }
+    }
+
+    out.push_str("- strict_resource_ledger:\n");
+    if ledger_entries.is_empty() {
+        out.push_str("  - none\n");
+    } else {
+        for entry in ledger_entries.iter().take(24) {
+            let chapter = entry
+                .chapter
+                .map(|value| format!("{value:03}"))
+                .unwrap_or_else(|| "???".to_string());
+            let _ = writeln!(
+                out,
+                "  - chapter {} {} | event: {} | source: {} | owner: {} | quantity/state: {} | obligation: {} | transfer: {} | loss: {}",
+                chapter,
+                entry.resource,
+                entry.event,
+                entry.source,
+                entry.owner,
+                entry.quantity_state,
+                entry.obligation,
+                entry.transfer,
+                entry.loss
+            );
+            if entry.affected_nodes.is_empty() {
+                out.push_str("    affected_nodes: missing\n");
+            } else {
+                let _ = writeln!(
+                    out,
+                    "    affected_nodes: {}",
+                    entry.affected_nodes.join(", ")
+                );
+            }
+            let _ = writeln!(
+                out,
+                "    evidence: {} | confidence: {:.2}",
+                entry.evidence, entry.confidence
             );
         }
     }
@@ -5904,6 +5962,251 @@ fn candidate_is_resource_related(candidate: &MemoryUpdateCandidate) -> bool {
             ),
             XIANXIA_RESOURCE_TERMS,
         ) > 0
+}
+
+fn resource_ledger_entries(
+    root: &Path,
+    chapter: Option<u32>,
+    graph: &MemoryGraph,
+    candidates: &[MemoryUpdateCandidate],
+) -> Result<Vec<ResourceLedgerEntry>> {
+    let mut entries = read_resource_ledger_entries(root, chapter)?;
+    for candidate in candidates
+        .iter()
+        .filter(|candidate| !candidate_is_applied(candidate))
+        .filter(|candidate| candidate_is_resource_related(candidate))
+    {
+        entries.push(resource_ledger_entry_from_candidate(candidate, Some(graph)));
+    }
+    entries.sort_by_key(|entry| {
+        (
+            entry.chapter.unwrap_or(u32::MAX),
+            entry.resource.clone(),
+            entry.event.clone(),
+        )
+    });
+    Ok(entries)
+}
+
+fn read_resource_ledger_entries(
+    root: &Path,
+    chapter: Option<u32>,
+) -> Result<Vec<ResourceLedgerEntry>> {
+    let path = root.join("memory/resources.jsonl");
+    if !path.is_file() {
+        return Ok(Vec::new());
+    }
+    let raw = read_required(&path)?;
+    let mut entries = Vec::new();
+    for line in raw.lines().map(str::trim).filter(|line| !line.is_empty()) {
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else {
+            continue;
+        };
+        let entry = resource_ledger_entry_from_json(&value);
+        if chapter.is_none_or(|chapter| entry.chapter == Some(chapter)) {
+            entries.push(entry);
+        }
+    }
+    Ok(entries)
+}
+
+fn resource_ledger_entry_from_json(value: &serde_json::Value) -> ResourceLedgerEntry {
+    ResourceLedgerEntry {
+        chapter: value
+            .get("chapter")
+            .and_then(serde_json::Value::as_u64)
+            .and_then(|chapter| u32::try_from(chapter).ok()),
+        resource: json_string_field(value, "resource").unwrap_or_else(|| "unknown".to_string()),
+        event: json_string_field(value, "event").unwrap_or_else(|| "state_change".to_string()),
+        source: json_string_field(value, "source").unwrap_or_else(|| "unknown".to_string()),
+        owner: json_string_field(value, "owner").unwrap_or_else(|| "unknown".to_string()),
+        quantity_state: json_string_field(value, "quantity_state")
+            .unwrap_or_else(|| "unknown".to_string()),
+        obligation: json_string_field(value, "obligation").unwrap_or_else(|| "unknown".to_string()),
+        transfer: json_string_field(value, "transfer").unwrap_or_else(|| "unknown".to_string()),
+        loss: json_string_field(value, "loss").unwrap_or_else(|| "unknown".to_string()),
+        affected_nodes: value
+            .get("affected_nodes")
+            .and_then(serde_json::Value::as_array)
+            .map(|values| {
+                values
+                    .iter()
+                    .filter_map(serde_json::Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(str::to_string)
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default(),
+        evidence: json_string_field(value, "evidence").unwrap_or_else(|| "unknown".to_string()),
+        confidence: value
+            .get("confidence")
+            .and_then(serde_json::Value::as_f64)
+            .map(|value| value as f32)
+            .unwrap_or(0.0),
+    }
+}
+
+fn json_string_field(value: &serde_json::Value, key: &str) -> Option<String> {
+    value
+        .get(key)
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+}
+
+fn resource_ledger_entry_from_candidate(
+    candidate: &MemoryUpdateCandidate,
+    graph: Option<&MemoryGraph>,
+) -> ResourceLedgerEntry {
+    let change = candidate.change.as_str();
+    ResourceLedgerEntry {
+        chapter: candidate.chapter,
+        resource: candidate.target.clone(),
+        event: infer_resource_event(change),
+        source: infer_resource_source(change),
+        owner: infer_resource_owner(candidate, graph),
+        quantity_state: infer_resource_quantity_state(change),
+        obligation: infer_resource_obligation(change),
+        transfer: infer_resource_transfer(change),
+        loss: infer_resource_loss(change),
+        affected_nodes: candidate
+            .affects
+            .iter()
+            .map(|affect| {
+                graph
+                    .map(|graph| resource_impact_label(affect, graph))
+                    .unwrap_or_else(|| affect.clone())
+            })
+            .collect(),
+        evidence: if candidate.evidence.trim().is_empty() {
+            "unknown".to_string()
+        } else {
+            candidate.evidence.clone()
+        },
+        confidence: candidate.confidence,
+    }
+}
+
+fn resource_ledger_json_record(entry: &ResourceLedgerEntry) -> serde_json::Value {
+    serde_json::json!({
+        "kind": "resource_ledger",
+        "chapter": entry.chapter,
+        "resource": entry.resource,
+        "event": entry.event,
+        "source": entry.source,
+        "owner": entry.owner,
+        "quantity_state": entry.quantity_state,
+        "obligation": entry.obligation,
+        "transfer": entry.transfer,
+        "loss": entry.loss,
+        "affected_nodes": entry.affected_nodes,
+        "evidence": entry.evidence,
+        "confidence": entry.confidence,
+        "applied_at": chrono::Utc::now().to_rfc3339(),
+    })
+}
+
+fn infer_resource_event(change: &str) -> String {
+    if count_terms(change, RESOURCE_TRANSFER_TERMS) > 0 {
+        "transfer".to_string()
+    } else if count_terms(change, RESOURCE_LOSS_TERMS) > 0 {
+        "loss".to_string()
+    } else if count_terms(change, RESOURCE_GAIN_TERMS) > 0 {
+        "gain".to_string()
+    } else if count_terms(change, XIANXIA_RESOURCE_OBLIGATION_TERMS) > 0 {
+        "obligation".to_string()
+    } else {
+        "state_change".to_string()
+    }
+}
+
+fn infer_resource_source(change: &str) -> String {
+    extract_after_any(change, RESOURCE_SOURCE_MARKERS).unwrap_or_else(|| "unknown".to_string())
+}
+
+fn infer_resource_owner(candidate: &MemoryUpdateCandidate, graph: Option<&MemoryGraph>) -> String {
+    if let Some(owner) = extract_after_any(&candidate.change, RESOURCE_OWNER_MARKERS) {
+        return owner;
+    }
+    if let Some(graph) = graph {
+        for affect in &candidate.affects {
+            let label = resource_impact_label(affect, graph);
+            if label.starts_with("character:") {
+                return label
+                    .strip_prefix("character:")
+                    .unwrap_or(label.as_str())
+                    .to_string();
+            }
+        }
+    }
+    "unknown".to_string()
+}
+
+fn infer_resource_quantity_state(change: &str) -> String {
+    extract_resource_quantity(change).unwrap_or_else(|| {
+        if change.trim().is_empty() {
+            "unknown".to_string()
+        } else {
+            limit_chars(change.trim(), 80)
+        }
+    })
+}
+
+fn infer_resource_obligation(change: &str) -> String {
+    if count_terms(change, XIANXIA_RESOURCE_OBLIGATION_TERMS) > 0 {
+        limit_chars(change.trim(), 100)
+    } else {
+        "unknown".to_string()
+    }
+}
+
+fn infer_resource_transfer(change: &str) -> String {
+    if count_terms(change, RESOURCE_TRANSFER_TERMS) > 0 {
+        limit_chars(change.trim(), 100)
+    } else {
+        "unknown".to_string()
+    }
+}
+
+fn infer_resource_loss(change: &str) -> String {
+    if count_terms(change, RESOURCE_LOSS_TERMS) > 0 {
+        limit_chars(change.trim(), 100)
+    } else {
+        "unknown".to_string()
+    }
+}
+
+fn extract_after_any(text: &str, markers: &[&str]) -> Option<String> {
+    markers
+        .iter()
+        .find_map(|marker| text.split_once(marker).map(|(_, value)| value))
+        .map(|value| {
+            value
+                .split(['，', '。', '；', ',', ';'])
+                .next()
+                .unwrap_or(value)
+                .trim()
+                .trim_matches(['：', ':', '为', '给', '至', '到', '了'])
+                .trim()
+                .to_string()
+        })
+        .filter(|value| !value.is_empty())
+}
+
+fn extract_resource_quantity(text: &str) -> Option<String> {
+    text.split(['，', '。', '；', ',', ';'])
+        .map(str::trim)
+        .find(|part| {
+            part.chars().any(|ch| ch.is_ascii_digit())
+                || [
+                    "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "半",
+                ]
+                .iter()
+                .any(|number| part.contains(number))
+        })
+        .map(|part| limit_chars(part, 80))
 }
 
 fn resource_candidate_impact(
@@ -7439,6 +7742,7 @@ fn add_jsonl_memory_nodes(
         ("memory/facts.jsonl", "knowledge"),
         ("memory/events.jsonl", "event"),
         ("memory/foreshadowing.jsonl", "promise"),
+        ("memory/resources.jsonl", "resource_ledger"),
     ] {
         let path = root.join(rel);
         let Some(raw) = std::fs::read_to_string(&path).ok() else {
@@ -9838,6 +10142,15 @@ const XIANXIA_RESOURCE_OBLIGATION_TERMS: &[&str] = &[
     "反噬",
     "损耗",
 ];
+const RESOURCE_GAIN_TERMS: &[&str] = &["获得", "拿到", "得到", "收下", "领取", "赏赐", "缴获"];
+const RESOURCE_TRANSFER_TERMS: &[&str] = &[
+    "转交", "交给", "给了", "交还", "归还", "移交", "让渡", "归属",
+];
+const RESOURCE_LOSS_TERMS: &[&str] = &[
+    "失去", "损失", "损耗", "消耗", "耗尽", "破碎", "毁掉", "被夺", "丢失",
+];
+const RESOURCE_SOURCE_MARKERS: &[&str] = &["来自", "来源", "源自", "由", "从"];
+const RESOURCE_OWNER_MARKERS: &[&str] = &["归属", "所有者", "持有者", "交给", "转交", "给了", "由"];
 const XIANXIA_CONTEXT_ECONOMY_TERMS: &[&str] = &[
     "价格", "市价", "收入", "俸禄", "供奉", "灵石", "钱", "货币", "坊市", "买", "卖", "债", "账",
 ];
@@ -10517,6 +10830,7 @@ fn apply_memory_candidates(root: &Path, chapter: Option<u32>, dry_run: bool) -> 
 
     let mut ledger_lines: BTreeMap<PathBuf, Vec<String>> = BTreeMap::new();
     let mut behavior_lines = Vec::new();
+    let mut resource_lines = Vec::new();
     for candidate in &candidates {
         let path = root.join(ledger_path_for_candidate(candidate));
         let record = serde_json::to_string(&candidate_ledger_record(candidate))
@@ -10525,6 +10839,13 @@ fn apply_memory_candidates(root: &Path, chapter: Option<u32>, dry_run: bool) -> 
         for behavior in behavior_records_from_candidate(candidate) {
             behavior_lines.push(
                 serde_json::to_string(&behavior).context("failed to encode behavior record")?,
+            );
+        }
+        if candidate_is_resource_related(candidate) {
+            let entry = resource_ledger_entry_from_candidate(candidate, None);
+            resource_lines.push(
+                serde_json::to_string(&resource_ledger_json_record(&entry))
+                    .context("failed to encode resource ledger record")?,
             );
         }
     }
@@ -10556,6 +10877,17 @@ fn apply_memory_candidates(root: &Path, chapter: Option<u32>, dry_run: bool) -> 
         ));
         if !dry_run {
             append_jsonl_records(&path, &behavior_lines)?;
+        }
+    }
+    if !resource_lines.is_empty() {
+        let path = root.join("memory/resources.jsonl");
+        out.push_str(&format!(
+            "- {}: {} record(s)\n",
+            display_relative(root, &path),
+            resource_lines.len()
+        ));
+        if !dry_run {
+            append_jsonl_records(&path, &resource_lines)?;
         }
     }
 
@@ -13174,6 +13506,7 @@ mod tests {
             "memory/events.jsonl",
             "memory/foreshadowing.jsonl",
             "memory/behavior.jsonl",
+            "memory/resources.jsonl",
             "eval/README.md",
             "eval/rubrics/quality_signals.md",
             "eval/failures/resource_without_cost",
@@ -15181,7 +15514,7 @@ mod tests {
         .expect("write chapter");
         write_text(
             &tmp.path().join("memory/candidates/001.json"),
-            r#"{"chapter":1,"candidates":[{"kind":"object_state","target":"筑基丹","change":"筑基丹转交沈砚，触发丹房债务","evidence":"chapters/001/final.md","confidence":0.91,"affects":["character:shen_yan","promise:丹房债务"],"status":"candidate"}]}"#,
+            r#"{"chapter":1,"candidates":[{"kind":"object_state","target":"筑基丹","change":"筑基丹来自丹房，转交沈砚，三枚，触发丹房债务","evidence":"chapters/001/final.md","confidence":0.91,"affects":["character:shen_yan","promise:丹房债务"],"status":"candidate"}]}"#,
             true,
         )
         .expect("write candidate");
@@ -15197,10 +15530,32 @@ mod tests {
         assert!(report.contains("筑基丹 | value: 三百下品灵石"));
         assert!(report.contains("controller: 丹房长老"));
         assert!(report.contains("cost: 经脉受损风险"));
-        assert!(report.contains("筑基丹转交沈砚，触发丹房债务"));
+        assert!(report.contains("strict_resource_ledger:"));
+        assert!(report.contains("event: transfer"));
+        assert!(report.contains("source: 丹房"));
+        assert!(report.contains("owner: 沈砚"));
+        assert!(report.contains("quantity/state:"));
+        assert!(report.contains("三枚"));
+        assert!(report.contains("obligation: 筑基丹来自丹房"));
+        assert!(report.contains("transfer: 筑基丹来自丹房"));
+        assert!(report.contains("筑基丹来自丹房，转交沈砚，三枚，触发丹房债务"));
         assert!(report.contains("impact: character:沈砚"));
         assert!(report.contains("promise:丹房债务"));
         assert!(report.contains("affects: character:shen_yan, promise:丹房债务"));
+
+        let apply = apply_memory_candidates(tmp.path(), Some(1), false).expect("apply");
+        assert!(apply.contains("memory/resources.jsonl: 1 record(s)"));
+        let resources =
+            read_required(&tmp.path().join("memory/resources.jsonl")).expect("resources ledger");
+        assert!(resources.contains("\"kind\":\"resource_ledger\""));
+        assert!(resources.contains("\"resource\":\"筑基丹\""));
+        assert!(resources.contains("\"event\":\"transfer\""));
+        assert!(resources.contains("\"source\":\"丹房\""));
+
+        let applied_report =
+            resource_ledger_report_from_workspace(tmp.path(), Some(1)).expect("resource ledger");
+        assert!(applied_report.contains("strict_resource_ledger:"));
+        assert!(applied_report.contains("affected_nodes: character:shen_yan, promise:丹房债务"));
     }
 
     #[test]
