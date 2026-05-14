@@ -49,6 +49,8 @@ const NOVEL_CONTEXT_RECENT_CHAPTER_BUDGET: usize = 72_000;
 const MEMORY_SOURCE_FINGERPRINT_TTL: Duration = Duration::from_secs(2);
 const MEMORY_SOURCE_FINGERPRINT_DEPTH: usize = 2;
 const PROJECT_MAP_RECENT_CHAPTERS: usize = 24;
+const READINESS_RECENT_WINDOW: u32 = 8;
+const READINESS_ARCHIVE_WINDOW: u32 = 20;
 const MEMORY_QUERY_SEED_LIMIT: usize = 16;
 const MEMORY_FRONTIER_EDGE_FANOUT: usize = 24;
 const MEMORY_NEIGHBORHOOD_EDGE_LIMIT: usize = 120;
@@ -773,7 +775,9 @@ pub(crate) struct NovelWorkspaceSummary {
     pub title: String,
     pub genre: String,
     pub target_words: u32,
+    pub current_volume: u32,
     pub current_chapter: u32,
+    pub next_chapter: u32,
     pub chapters: usize,
     pub drafts: usize,
     pub finals: usize,
@@ -787,10 +791,35 @@ pub(crate) struct NovelWorkspaceSummary {
     pub candidate_updates: usize,
     pub memory_graph_ready: bool,
     pub promise_statuses: Vec<(String, usize)>,
+    pub open_promises: Vec<String>,
     pub relationship_changes: usize,
     pub state_changes: usize,
     pub relationship_previews: Vec<String>,
     pub state_change_previews: Vec<String>,
+    pub readiness: NovelWorkflowReadiness,
+}
+
+#[derive(Debug, Clone, Default)]
+pub(crate) struct NovelWorkflowReadiness {
+    pub next_action: String,
+    pub blocked: bool,
+    pub blockers: Vec<String>,
+    pub warnings: Vec<String>,
+    pub quality_gate: String,
+    pub context_score: Option<i32>,
+    pub pending_candidates: usize,
+    pub candidate_pressure_total: usize,
+    pub candidate_pressure_max_per_chapter: usize,
+    pub candidate_target_per_chapter: usize,
+    pub recent_summary_avg_chars: usize,
+    pub recent_summary_max_chars: usize,
+    pub recent_summary_overweight: usize,
+    pub recent_summary_canon_sparse: usize,
+    pub missing_recent_summaries: usize,
+    pub missing_recent_audits: usize,
+    pub missing_recent_finals: usize,
+    pub archive_due: bool,
+    pub regression_due: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -828,6 +857,7 @@ pub(crate) struct NovelMemorySnapshot {
     pub state_changes: usize,
     pub relationship_previews: Vec<String>,
     pub state_change_previews: Vec<String>,
+    pub readiness: NovelWorkflowReadiness,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1168,6 +1198,32 @@ fn print_status(workspace: &Path) -> Result<()> {
     println!("Memory edges: {}", summary.memory_edges);
     println!("Memory schema: {}", summary.memory_schema_status);
     println!("Candidate memory updates: {}", summary.candidate_updates);
+    println!(
+        "Workflow gate: {}{}",
+        summary.readiness.quality_gate,
+        if summary.readiness.blocked {
+            " (blocked)"
+        } else {
+            ""
+        }
+    );
+    println!("Next action: {}", summary.readiness.next_action);
+    println!(
+        "Late memory pressure: pending {}, recent {}, max/chapter {}, summary avg {}, max {}, overlong {}, canon sparse {}",
+        summary.readiness.pending_candidates,
+        summary.readiness.candidate_pressure_total,
+        summary.readiness.candidate_pressure_max_per_chapter,
+        summary.readiness.recent_summary_avg_chars,
+        summary.readiness.recent_summary_max_chars,
+        summary.readiness.recent_summary_overweight,
+        summary.readiness.recent_summary_canon_sparse
+    );
+    for blocker in &summary.readiness.blockers {
+        println!("Workflow blocker: {blocker}");
+    }
+    for warning in &summary.readiness.warnings {
+        println!("Workflow warning: {warning}");
+    }
     if !summary.promise_statuses.is_empty() {
         println!(
             "Promise lifecycle: {}",
@@ -1270,13 +1326,34 @@ pub(crate) fn workspace_summary(workspace: &Path) -> Result<NovelWorkspaceSummar
                 .count()
         })
         .unwrap_or(graph_candidate_updates);
+    let current_chapter = manifest.current_chapter.max(
+        chapters
+            .iter()
+            .map(|(chapter, _)| *chapter)
+            .max()
+            .unwrap_or(0),
+    );
+    let next_chapter = current_chapter.saturating_add(1).max(1);
+    let readiness = workflow_readiness(
+        &root,
+        &manifest,
+        &chapters,
+        current_chapter,
+        next_chapter,
+        memory_graph_ready,
+        &memory_schema_status,
+        candidate_updates,
+    )?;
+    let open_promises = foreshadowing_preview(&root, 3).unwrap_or_default();
 
     Ok(NovelWorkspaceSummary {
         root,
         title: manifest.title,
         genre: manifest.genre,
         target_words: manifest.target_words,
-        current_chapter: manifest.current_chapter,
+        current_volume: manifest.current_volume,
+        current_chapter,
+        next_chapter,
         chapters: chapters.len(),
         drafts,
         finals,
@@ -1290,10 +1367,12 @@ pub(crate) fn workspace_summary(workspace: &Path) -> Result<NovelWorkspaceSummar
         candidate_updates,
         memory_graph_ready,
         promise_statuses: graph_health.promise_statuses,
+        open_promises,
         relationship_changes: graph_health.relationship_changes,
         state_changes: graph_health.state_changes,
         relationship_previews: graph_health.relationship_previews,
         state_change_previews: graph_health.state_change_previews,
+        readiness,
     })
 }
 
@@ -1330,6 +1409,235 @@ pub(crate) fn audit_risk_summary(
     Ok(summary)
 }
 
+fn workflow_readiness(
+    root: &Path,
+    manifest: &BookManifest,
+    chapters: &[(u32, PathBuf)],
+    current_chapter: u32,
+    next_chapter: u32,
+    memory_graph_ready: bool,
+    memory_schema_status: &str,
+    pending_candidates: usize,
+) -> Result<NovelWorkflowReadiness> {
+    let mut readiness = NovelWorkflowReadiness {
+        candidate_target_per_chapter: MEMORY_CANDIDATE_TARGET_MAX_PER_CHAPTER,
+        pending_candidates,
+        ..NovelWorkflowReadiness::default()
+    };
+
+    let plan_ready = master_plan_ready(root);
+    if !plan_ready {
+        readiness
+            .blockers
+            .push("outline/master_plan.md is missing or still a template".to_string());
+    }
+    let next_dir = chapter_dir(root, next_chapter);
+    let character_cards = non_template_files(collect_asset_files(&root.join("cards/characters"))?)
+        .into_iter()
+        .filter(|path| path.is_file())
+        .count();
+    if character_cards == 0 {
+        readiness
+            .blockers
+            .push("character cards are missing".to_string());
+    }
+
+    let recent_summary_paths =
+        recent_summary_paths(root, next_chapter, READINESS_RECENT_WINDOW as usize)?;
+    let summary_quality = recent_memory_summary_quality(root, &recent_summary_paths)?;
+    readiness.recent_summary_avg_chars = summary_quality.avg_chars;
+    readiness.recent_summary_max_chars = summary_quality.max_chars;
+    readiness.recent_summary_overweight = summary_quality.overweight_count;
+    readiness.recent_summary_canon_sparse = summary_quality.canon_sparse_count;
+
+    let candidate_pressure = memory_candidate_pressure(root, next_chapter);
+    readiness.candidate_pressure_total = candidate_pressure.total;
+    readiness.candidate_pressure_max_per_chapter = candidate_pressure.max_per_chapter;
+
+    let recent_start = next_chapter.saturating_sub(READINESS_RECENT_WINDOW).max(1);
+    for chapter in recent_start..next_chapter {
+        let dir = chapter_dir(root, chapter);
+        if !dir.exists() {
+            continue;
+        }
+        if !dir.join("final.md").is_file() {
+            readiness.missing_recent_finals += 1;
+        }
+        if !dir.join("audit.md").is_file() {
+            readiness.missing_recent_audits += 1;
+        }
+        if !root
+            .join("memory/summaries")
+            .join(format!("{chapter:03}.md"))
+            .is_file()
+        {
+            readiness.missing_recent_summaries += 1;
+        }
+    }
+
+    let completed_since_archive = chapters
+        .iter()
+        .filter(|(chapter, dir)| {
+            *chapter <= current_chapter
+                && (dir.join("final.md").is_file() || dir.join("draft.md").is_file())
+        })
+        .count() as u32;
+    let archive_count =
+        collect_files_with_extensions(&root.join("memory/archives"), &["md", "json"])?.len() as u32;
+    readiness.archive_due =
+        completed_since_archive >= READINESS_ARCHIVE_WINDOW && archive_count == 0;
+    readiness.regression_due = current_chapter >= 10
+        && collect_files_with_extensions(&root.join("memory/reports"), &["md", "json"])?.is_empty();
+
+    if !memory_graph_ready {
+        readiness
+            .blockers
+            .push("memory graph missing; run `deepseek memory build`".to_string());
+    } else if !memory_schema_status.starts_with("ok:") {
+        readiness.blockers.push(format!(
+            "memory graph schema not healthy: {memory_schema_status}"
+        ));
+    }
+    if summary_quality.overweight_count > 0 {
+        readiness.warnings.push(format!(
+            "{} recent memory summary file(s) exceed {} chars",
+            summary_quality.overweight_count, MEMORY_SUMMARY_OVERWEIGHT_CHARS
+        ));
+    }
+    if summary_quality.canon_sparse_count > 0 {
+        readiness.warnings.push(format!(
+            "{} recent memory summary file(s) lack enough canon sections",
+            summary_quality.canon_sparse_count
+        ));
+    }
+    if candidate_pressure.max_per_chapter > MEMORY_CANDIDATE_TARGET_MAX_PER_CHAPTER {
+        readiness.warnings.push(format!(
+            "pending memory candidates exceed target: max {} in one chapter, target {}",
+            candidate_pressure.max_per_chapter, MEMORY_CANDIDATE_TARGET_MAX_PER_CHAPTER
+        ));
+    }
+    if readiness.missing_recent_summaries > 0 && next_chapter > 2 {
+        readiness.warnings.push(format!(
+            "{} recent chapter(s) have no memory summary",
+            readiness.missing_recent_summaries
+        ));
+    }
+    if readiness.missing_recent_audits > 0 && next_chapter > 2 {
+        readiness.warnings.push(format!(
+            "{} recent chapter(s) have no audit report",
+            readiness.missing_recent_audits
+        ));
+    }
+    if readiness.archive_due {
+        readiness.warnings.push(format!(
+            "{} completed chapter(s) without a stage archive; run `deepseek memory archive <start> <end>`",
+            completed_since_archive
+        ));
+    }
+    if readiness.regression_due {
+        readiness.warnings.push(
+            "no memory regression report found for a 10+ chapter project; run `deepseek memory regression 10 --write`"
+                .to_string(),
+        );
+    }
+
+    readiness.next_action = next_workflow_action(
+        root,
+        manifest,
+        chapters,
+        next_chapter,
+        plan_ready,
+        pending_candidates,
+    );
+    if let Some(chapter) = readiness
+        .next_action
+        .strip_prefix("deepseek brief ")
+        .and_then(|raw| raw.parse::<u32>().ok())
+    {
+        let brief_dir = if chapter == next_chapter {
+            next_dir.clone()
+        } else {
+            chapter_dir(root, chapter)
+        };
+        if !brief_dir.join("brief.md").is_file() {
+            readiness
+                .blockers
+                .push(format!("chapter {chapter:03} brief is missing"));
+        }
+    }
+    readiness.blockers.sort();
+    readiness.blockers.dedup();
+    readiness.warnings.sort();
+    readiness.warnings.dedup();
+    let estimated_signal_count = readiness.blockers.len() + readiness.warnings.len();
+    let score = 100_i32 - (estimated_signal_count as i32 * 10)
+        + i32::from(plan_ready) * 8
+        + i32::from(next_dir.join("brief.md").is_file()) * 8
+        + (recent_summary_paths.len().min(4) as i32 * 3)
+        + (character_cards.min(6) as i32);
+    readiness.context_score = Some(score.clamp(0, 100));
+    readiness.blocked = !readiness.blockers.is_empty();
+    readiness.quality_gate = if readiness.blocked {
+        "blocked".to_string()
+    } else if pending_candidates > 0
+        || readiness.candidate_pressure_max_per_chapter > MEMORY_CANDIDATE_TARGET_MAX_PER_CHAPTER
+        || readiness.recent_summary_overweight > 0
+        || readiness.recent_summary_canon_sparse > 0
+        || readiness.missing_recent_audits > 0
+    {
+        "needs-review".to_string()
+    } else {
+        "ready".to_string()
+    };
+    Ok(readiness)
+}
+
+fn master_plan_ready(root: &Path) -> bool {
+    let master_plan = root.join("outline/master_plan.md");
+    std::fs::read_to_string(&master_plan)
+        .ok()
+        .map(|text| text.len() > 80 && !text.contains("运行 `deepseek plan`"))
+        .unwrap_or(false)
+}
+
+fn next_workflow_action(
+    root: &Path,
+    _manifest: &BookManifest,
+    chapters: &[(u32, PathBuf)],
+    next_chapter: u32,
+    plan_ready: bool,
+    pending_candidates: usize,
+) -> String {
+    if !plan_ready {
+        return "deepseek plan".to_string();
+    }
+    for (chapter, dir) in chapters {
+        if !dir.join("brief.md").is_file() {
+            return format!("deepseek brief {chapter}");
+        }
+        if !dir.join("draft.md").is_file() && !dir.join("final.md").is_file() {
+            return format!("deepseek write {chapter}");
+        }
+        if dir.join("draft.md").is_file() && !dir.join("audit.md").is_file() {
+            return format!("deepseek audit {chapter}");
+        }
+        if dir.join("audit.md").is_file() && !dir.join("final.md").is_file() {
+            return format!("deepseek revise {chapter}");
+        }
+        if !root
+            .join("memory/summaries")
+            .join(format!("{chapter:03}.md"))
+            .is_file()
+        {
+            return format!("deepseek remember {chapter}");
+        }
+    }
+    if pending_candidates > 0 {
+        return "deepseek memory candidates && deepseek memory apply".to_string();
+    }
+    format!("deepseek brief {next_chapter}")
+}
+
 pub(crate) fn project_map_packet(workspace: &Path) -> Result<String> {
     project_map_packet_with_options(workspace, false)
 }
@@ -1350,6 +1658,7 @@ pub(crate) fn project_map_packet_with_options(workspace: &Path, full: bool) -> R
     let candidate_files =
         collect_files_with_extensions(&root.join("memory/candidates"), &["json"])?;
     let candidates = collect_memory_update_candidates(&root)?;
+    let summary = workspace_summary(&root)?;
     let graph = if memory_graph_path(&root).is_file() {
         load_memory_graph(&root).ok()
     } else {
@@ -1374,6 +1683,26 @@ pub(crate) fn project_map_packet_with_options(workspace: &Path, full: bool) -> R
     let _ = writeln!(out, "- Current chapter: {}", manifest.current_chapter);
     let _ = writeln!(out, "- Target words: {}", manifest.target_words);
     let _ = writeln!(out, "- Root: {}", root.display());
+    let _ = writeln!(
+        out,
+        "- Workflow gate: {}{}",
+        summary.readiness.quality_gate,
+        if summary.readiness.blocked {
+            " (blocked)"
+        } else {
+            ""
+        }
+    );
+    let _ = writeln!(out, "- Next action: {}", summary.readiness.next_action);
+    let _ = writeln!(
+        out,
+        "- Context score: {}",
+        summary
+            .readiness
+            .context_score
+            .map(|score| format!("{score}/100"))
+            .unwrap_or_else(|| "n/a".to_string())
+    );
 
     let _ = writeln!(out, "\n## Structure\n");
     let _ = writeln!(out, "- Chapters: {}", chapters.len());
@@ -1476,6 +1805,28 @@ pub(crate) fn project_map_packet_with_options(workspace: &Path, full: bool) -> R
     );
     let _ = writeln!(out, "- Candidate files: {}", candidate_files.len());
     let _ = writeln!(out, "- Candidate updates: {}", candidates.len());
+    let _ = writeln!(
+        out,
+        "- Memory pressure: pending {}, recent {}, max/chapter {}, target/chapter {}",
+        summary.readiness.pending_candidates,
+        summary.readiness.candidate_pressure_total,
+        summary.readiness.candidate_pressure_max_per_chapter,
+        summary.readiness.candidate_target_per_chapter
+    );
+    let _ = writeln!(
+        out,
+        "- Summary density: avg {}, max {}, overlong {}, canon sparse {}",
+        summary.readiness.recent_summary_avg_chars,
+        summary.readiness.recent_summary_max_chars,
+        summary.readiness.recent_summary_overweight,
+        summary.readiness.recent_summary_canon_sparse
+    );
+    for blocker in &summary.readiness.blockers {
+        let _ = writeln!(out, "- Workflow blocker: {blocker}");
+    }
+    for warning in summary.readiness.warnings.iter().take(8) {
+        let _ = writeln!(out, "- Workflow warning: {warning}");
+    }
     if full || chapters.len() <= PROJECT_MAP_RECENT_CHAPTERS {
         append_file_list(&mut out, &root, "Summaries", &summary_files);
         append_file_list(&mut out, &root, "Reports", &report_files);
@@ -5588,6 +5939,35 @@ fn resource_impact_label(affect: &str, graph: &MemoryGraph) -> String {
 }
 
 fn memory_snapshot_for_graph(root: PathBuf, graph: MemoryGraph) -> Result<NovelMemorySnapshot> {
+    let manifest = load_manifest(&root)?;
+    let chapters = collect_chapter_dirs(&root)?;
+    let current_chapter = manifest.current_chapter.max(
+        chapters
+            .iter()
+            .map(|(chapter, _)| *chapter)
+            .max()
+            .unwrap_or(0),
+    );
+    let next_chapter = current_chapter.saturating_add(1).max(1);
+    let pending_candidates = collect_memory_update_candidates(&root)
+        .map(|candidates| {
+            candidates
+                .into_iter()
+                .filter(|candidate| !candidate_is_applied(candidate))
+                .count()
+        })
+        .unwrap_or_else(|_| graph.candidate_updates.len());
+    let schema_status = memory_schema_validation_status(&graph);
+    let readiness = workflow_readiness(
+        &root,
+        &manifest,
+        &chapters,
+        current_chapter,
+        next_chapter,
+        memory_graph_path(&root).is_file(),
+        &schema_status,
+        pending_candidates,
+    )?;
     let mut kinds: BTreeMap<String, usize> = BTreeMap::new();
     for node in &graph.nodes {
         *kinds.entry(node.kind.clone()).or_insert(0) += 1;
@@ -5618,7 +5998,7 @@ fn memory_snapshot_for_graph(root: PathBuf, graph: MemoryGraph) -> Result<NovelM
     Ok(NovelMemorySnapshot {
         graph_path: memory_graph_path(&root),
         graph_ready: true,
-        schema_status: memory_schema_validation_status(&graph),
+        schema_status,
         updated_at: if graph.updated_at.is_empty() {
             None
         } else {
@@ -5639,6 +6019,7 @@ fn memory_snapshot_for_graph(root: PathBuf, graph: MemoryGraph) -> Result<NovelM
         state_changes: health.state_changes,
         relationship_previews: health.relationship_previews,
         state_change_previews: health.state_change_previews,
+        readiness,
         root,
     })
 }
@@ -13301,6 +13682,9 @@ mod tests {
 
         assert!(map.contains("# Novel Project Map"));
         assert!(map.contains("Title: 地图测试"));
+        assert!(map.contains("Workflow gate:"));
+        assert!(map.contains("Next action:"));
+        assert!(map.contains("Context score:"));
         assert!(map.contains("cards/characters/lin_mo.yaml"));
         assert!(map.contains("cards/locations/warehouse.md"));
         assert!(map.contains("## Local Materials"));
@@ -13315,6 +13699,8 @@ mod tests {
         assert!(map.contains("Reports"));
         assert!(map.contains("memory/reports/20260514T000000Z-analysis.md"));
         assert!(map.contains("Candidate updates: 1"));
+        assert!(map.contains("Memory pressure:"));
+        assert!(map.contains("Summary density:"));
         assert!(map.contains("事故真相 | new | chapter 001"));
     }
 
@@ -13362,6 +13748,8 @@ mod tests {
         let full = project_map_packet_with_options(tmp.path(), true).expect("full map");
 
         assert!(compact.contains("Compact view"));
+        assert!(compact.contains("Workflow gate:"));
+        assert!(compact.contains("Memory pressure:"));
         assert!(compact.contains("Chapter 030"));
         assert!(compact.contains("Chapter 007"));
         assert!(!compact.contains("Chapter 001"));
@@ -15717,6 +16105,151 @@ mod tests {
         assert!(packet.contains("pending: 1"));
         assert!(packet.contains("source: `analysis.md`"));
         assert!(packet.contains("candidate_file: `memory/candidates/analysis-"));
+    }
+
+    #[test]
+    fn workspace_summary_surfaces_workflow_readiness_and_memory_noise() {
+        let tmp = TempDir::new().expect("temp dir");
+        init_project(
+            tmp.path(),
+            Some("闭环状态测试".to_string()),
+            None,
+            None,
+            80_000,
+            "zh-CN".to_string(),
+            false,
+        )
+        .expect("init project");
+        write_text(
+            &tmp.path().join("outline/master_plan.md"),
+            &"总纲已经完成，足够长，避免仍被识别为模板。".repeat(8),
+            true,
+        )
+        .expect("plan");
+        write_text(
+            &tmp.path().join("cards/characters/lin_mo.yaml"),
+            "name: 林墨\naliases: 林先生\n",
+            true,
+        )
+        .expect("card");
+        write_text(
+            &tmp.path().join("chapters/001/brief.md"),
+            "# 第 001 章\n\n场景档位: A档\n",
+            true,
+        )
+        .expect("brief");
+        write_text(
+            &tmp.path().join("chapters/001/draft.md"),
+            "# 第 001 章\n\n林墨推门入局。",
+            true,
+        )
+        .expect("draft");
+        write_text(
+            &tmp.path().join("memory/summaries/001.md"),
+            &format!(
+                "# 第 001 章记忆\n\n## 章节摘要\n{}\n\n## CANDIDATE_MEMORY_UPDATES\n- none\n",
+                "摘要噪声。".repeat(900)
+            ),
+            true,
+        )
+        .expect("summary");
+        write_text(
+            &tmp.path().join("memory/candidates/001.json"),
+            r#"{
+  "candidates": [
+    {"chapter":1,"kind":"knowledge","target":"林墨","change":"知道旧案一","evidence":"chapters/001/draft.md","confidence":0.9},
+    {"chapter":1,"kind":"knowledge","target":"林墨","change":"知道旧案二","evidence":"chapters/001/draft.md","confidence":0.9},
+    {"chapter":1,"kind":"knowledge","target":"林墨","change":"知道旧案三","evidence":"chapters/001/draft.md","confidence":0.9},
+    {"chapter":1,"kind":"knowledge","target":"林墨","change":"知道旧案四","evidence":"chapters/001/draft.md","confidence":0.9},
+    {"chapter":1,"kind":"knowledge","target":"林墨","change":"知道旧案五","evidence":"chapters/001/draft.md","confidence":0.9},
+    {"chapter":1,"kind":"knowledge","target":"林墨","change":"知道旧案六","evidence":"chapters/001/draft.md","confidence":0.9},
+    {"chapter":1,"kind":"knowledge","target":"林墨","change":"知道旧案七","evidence":"chapters/001/draft.md","confidence":0.9}
+  ]
+}"#,
+            true,
+        )
+        .expect("candidates");
+        rebuild_memory_graph(tmp.path()).expect("graph");
+
+        let summary = workspace_summary(tmp.path()).expect("summary");
+
+        assert_eq!(summary.readiness.next_action, "deepseek audit 1");
+        assert_eq!(summary.readiness.quality_gate, "needs-review");
+        assert!(summary.readiness.blockers.is_empty());
+        assert_eq!(summary.readiness.candidate_pressure_max_per_chapter, 7);
+        assert!(summary.readiness.recent_summary_overweight > 0);
+        assert!(summary.readiness.recent_summary_canon_sparse > 0);
+        assert!(
+            summary
+                .readiness
+                .warnings
+                .iter()
+                .any(|line| line.contains("pending memory candidates exceed target"))
+        );
+    }
+
+    #[test]
+    fn workspace_summary_blocks_only_when_next_brief_is_the_next_action() {
+        let tmp = TempDir::new().expect("temp dir");
+        init_project(
+            tmp.path(),
+            Some("下一章门禁测试".to_string()),
+            None,
+            None,
+            80_000,
+            "zh-CN".to_string(),
+            false,
+        )
+        .expect("init project");
+        write_text(
+            &tmp.path().join("outline/master_plan.md"),
+            &"总纲已经完成，足够长，避免仍被识别为模板。".repeat(8),
+            true,
+        )
+        .expect("plan");
+        write_text(
+            &tmp.path().join("cards/characters/lin_mo.yaml"),
+            "name: 林墨\naliases: 林先生\n",
+            true,
+        )
+        .expect("card");
+        write_text(
+            &tmp.path().join("chapters/001/brief.md"),
+            "# 第 001 章\n\n场景档位: A档\n",
+            true,
+        )
+        .expect("brief");
+        write_text(
+            &tmp.path().join("chapters/001/final.md"),
+            "# 第 001 章\n\n林墨完成第一步。",
+            true,
+        )
+        .expect("final");
+        write_text(
+            &tmp.path().join("chapters/001/audit.md"),
+            "## OK\n- 通过\n",
+            true,
+        )
+        .expect("audit");
+        write_text(
+            &tmp.path().join("memory/summaries/001.md"),
+            "# 第 001 章记忆\n\n## 章节摘要\n林墨完成第一步。\n\n## 人物知识边界\n- 林墨：知道第一步结果。\n\n## 承诺推进\n- 无。\n\n## 资源变化\n- 无。\n\n## 地点状态\n- 无。\n\n## 未兑现伏笔\n- 无。\n",
+            true,
+        )
+        .expect("summary");
+        rebuild_memory_graph(tmp.path()).expect("graph");
+
+        let summary = workspace_summary(tmp.path()).expect("summary");
+
+        assert_eq!(summary.readiness.next_action, "deepseek brief 2");
+        assert_eq!(summary.readiness.quality_gate, "blocked");
+        assert!(
+            summary
+                .readiness
+                .blockers
+                .iter()
+                .any(|line| line.contains("chapter 002 brief is missing"))
+        );
     }
 
     #[test]

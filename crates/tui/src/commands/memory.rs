@@ -279,6 +279,47 @@ fn format_memory_snapshot(snapshot: &novel::NovelMemorySnapshot) -> String {
         snapshot.facts, snapshot.events
     ));
     out.push_str(&format!("  Foreshadowing:   {}\n", snapshot.foreshadowing));
+    out.push_str(&format!(
+        "  Workflow gate:   {}{}\n",
+        snapshot.readiness.quality_gate,
+        if snapshot.readiness.blocked {
+            " (blocked)"
+        } else {
+            ""
+        }
+    ));
+    out.push_str(&format!(
+        "  Next action:     {}\n",
+        snapshot.readiness.next_action
+    ));
+    out.push_str(&format!(
+        "  Context score:   {}\n",
+        snapshot
+            .readiness
+            .context_score
+            .map(|score| format!("{score}/100"))
+            .unwrap_or_else(|| "n/a".to_string())
+    ));
+    out.push_str(&format!(
+        "  Memory pressure: pending {}, recent {}, max/chapter {}, target/chapter {}\n",
+        snapshot.readiness.pending_candidates,
+        snapshot.readiness.candidate_pressure_total,
+        snapshot.readiness.candidate_pressure_max_per_chapter,
+        snapshot.readiness.candidate_target_per_chapter
+    ));
+    out.push_str(&format!(
+        "  Summary density: avg {}, max {}, overlong {}, canon sparse {}\n",
+        snapshot.readiness.recent_summary_avg_chars,
+        snapshot.readiness.recent_summary_max_chars,
+        snapshot.readiness.recent_summary_overweight,
+        snapshot.readiness.recent_summary_canon_sparse
+    ));
+    for blocker in &snapshot.readiness.blockers {
+        out.push_str(&format!("  Workflow blocker: {blocker}\n"));
+    }
+    for warning in snapshot.readiness.warnings.iter().take(6) {
+        out.push_str(&format!("  Workflow warning: {warning}\n"));
+    }
     if !snapshot.promise_statuses.is_empty() {
         out.push_str(&format!(
             "  Promise lifecycle: {}\n",
@@ -608,6 +649,11 @@ mod tests {
         assert!(msg.contains("Nodes:"));
         assert!(msg.contains("Schema:"));
         assert!(msg.contains("ok: v2"));
+        assert!(msg.contains("Workflow gate:"));
+        assert!(msg.contains("Next action:"));
+        assert!(msg.contains("Context score:"));
+        assert!(msg.contains("Memory pressure:"));
+        assert!(msg.contains("Summary density:"));
         assert!(msg.contains("Promise lifecycle: progress=1"));
         assert!(msg.contains("Reports:"));
         assert!(msg.contains("Relationship changes: 1"));

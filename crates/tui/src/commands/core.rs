@@ -202,16 +202,15 @@ pub fn deepseek_links(app: &mut App) -> CommandResult {
 pub fn home_dashboard(app: &mut App) -> CommandResult {
     let locale = app.ui_locale;
     let mut stats = String::new();
-    let novel = novel_workspace_summary(&app.workspace);
+    let novel = crate::novel::workspace_summary(&app.workspace).ok();
 
     // Basic info
     let _ = writeln!(stats, "{}", tr(locale, MessageId::HomeDashboardTitle));
     let _ = writeln!(stats, "============================================");
     if let Some(novel) = novel {
+        let audit_risks = crate::novel::audit_risk_summary(&app.workspace, 3).unwrap_or_default();
         let _ = writeln!(stats, "Book:       {}", novel.title);
-        if let Some(genre) = novel.genre {
-            let _ = writeln!(stats, "Genre:      {genre}");
-        }
+        let _ = writeln!(stats, "Genre:      {}", novel.genre);
         let _ = writeln!(
             stats,
             "Assets:     {} chapters, {} drafts, {} finals, {} audits",
@@ -224,13 +223,13 @@ pub fn home_dashboard(app: &mut App) -> CommandResult {
         );
         let _ = writeln!(
             stats,
-            "Canon:      {} character cards, {} facts, {} events, {} foreshadowing, {} materials",
-            novel.character_cards, novel.facts, novel.events, novel.foreshadowing, novel.materials
+            "Canon:      {} memory nodes, {} memory edges, {} candidates, {} materials",
+            novel.memory_nodes, novel.memory_edges, novel.candidate_updates, novel.materials
         );
         let _ = writeln!(
             stats,
             "Memory:     graph {}, {} candidates, {} summaries",
-            if novel.memory_graph {
+            if novel.memory_graph_ready {
                 "ready"
             } else {
                 "missing"
@@ -238,12 +237,46 @@ pub fn home_dashboard(app: &mut App) -> CommandResult {
             novel.candidate_updates,
             novel.summaries
         );
+        let _ = writeln!(
+            stats,
+            "Gate:       {} | score {} | next {}",
+            novel.readiness.quality_gate,
+            novel
+                .readiness
+                .context_score
+                .map(|score| format!("{score}/100"))
+                .unwrap_or_else(|| "n/a".to_string()),
+            novel.readiness.next_action
+        );
+        let _ = writeln!(
+            stats,
+            "Noise:      pending {}, recent {}, max/chapter {}, summary avg {}, max {}, overlong {}, canon sparse {}",
+            novel.readiness.pending_candidates,
+            novel.readiness.candidate_pressure_total,
+            novel.readiness.candidate_pressure_max_per_chapter,
+            novel.readiness.recent_summary_avg_chars,
+            novel.readiness.recent_summary_max_chars,
+            novel.readiness.recent_summary_overweight,
+            novel.readiness.recent_summary_canon_sparse
+        );
+        for blocker in &novel.readiness.blockers {
+            let _ = writeln!(stats, "  - blocker: {blocker}");
+        }
+        for warning in novel.readiness.warnings.iter().take(5) {
+            let _ = writeln!(stats, "  - warning: {warning}");
+        }
         if !novel.promise_statuses.is_empty() {
             let _ = writeln!(
                 stats,
                 "Promises:   {}",
                 crate::novel::format_promise_status_counts(&novel.promise_statuses)
             );
+        }
+        if !novel.open_promises.is_empty() {
+            let _ = writeln!(stats, "Open promises:");
+            for promise in &novel.open_promises {
+                let _ = writeln!(stats, "  - {promise}");
+            }
         }
         if novel.relationship_changes > 0 || novel.state_changes > 0 {
             let _ = writeln!(
@@ -258,46 +291,40 @@ pub fn home_dashboard(app: &mut App) -> CommandResult {
                 let _ = writeln!(stats, "  - state: {preview}");
             }
         }
-        if !novel.open_promises.is_empty() {
-            let _ = writeln!(stats, "Open promises:");
-            for promise in &novel.open_promises {
-                let _ = writeln!(stats, "  - {promise}");
-            }
-        }
-        if novel.audit_risks.blockers > 0
-            || novel.audit_risks.majors > 0
-            || novel.audit_risks.affected_nodes > 0
-            || novel.audit_risks.pending_candidates > 0
+        if audit_risks.blockers > 0
+            || audit_risks.majors > 0
+            || audit_risks.affected_nodes > 0
+            || audit_risks.pending_candidates > 0
         {
             let _ = writeln!(
                 stats,
                 "Risks:      {} blockers, {} majors, {} affected nodes, {} pending memory candidates",
-                novel.audit_risks.blockers,
-                novel.audit_risks.majors,
-                novel.audit_risks.affected_nodes,
-                novel.audit_risks.pending_candidates
+                audit_risks.blockers,
+                audit_risks.majors,
+                audit_risks.affected_nodes,
+                audit_risks.pending_candidates
             );
-            for risk in &novel.audit_risks.risk_previews {
+            for risk in &audit_risks.risk_previews {
                 let _ = writeln!(stats, "  - {risk}");
             }
-            if !novel.audit_risks.layered_counts.is_empty() {
+            if !audit_risks.layered_counts.is_empty() {
                 let _ = writeln!(
                     stats,
                     "Risk categories: {}",
-                    crate::novel::format_audit_layer_counts(&novel.audit_risks.layered_counts)
+                    crate::novel::format_audit_layer_counts(&audit_risks.layered_counts)
                 );
             }
-            for risk in &novel.audit_risks.layered_previews {
+            for risk in &audit_risks.layered_previews {
                 let _ = writeln!(stats, "  - layered: {risk}");
             }
-            for affected in &novel.audit_risks.affected_previews {
+            for affected in &audit_risks.affected_previews {
                 let _ = writeln!(stats, "  - affected: {affected}");
             }
-            for candidate in &novel.audit_risks.candidate_previews {
+            for candidate in &audit_risks.candidate_previews {
                 let _ = writeln!(stats, "  - pending memory: {candidate}");
             }
         }
-        let _ = writeln!(stats, "Next:       {}", novel.next_action);
+        let _ = writeln!(stats, "Next:       {}", novel.readiness.next_action);
     } else {
         let _ = writeln!(stats, "Book:       not initialized (run /init)");
     }
@@ -412,324 +439,6 @@ pub fn home_dashboard(app: &mut App) -> CommandResult {
     }
 
     CommandResult::message(stats)
-}
-
-struct NovelWorkspaceSummary {
-    title: String,
-    genre: Option<String>,
-    current_volume: u32,
-    current_chapter: u32,
-    next_chapter: u32,
-    chapters: usize,
-    drafts: usize,
-    finals: usize,
-    audits: usize,
-    summaries: usize,
-    materials: usize,
-    character_cards: usize,
-    facts: usize,
-    events: usize,
-    foreshadowing: usize,
-    open_promises: Vec<String>,
-    candidate_updates: usize,
-    memory_graph: bool,
-    promise_statuses: Vec<(String, usize)>,
-    relationship_changes: usize,
-    state_changes: usize,
-    relationship_previews: Vec<String>,
-    state_change_previews: Vec<String>,
-    audit_risks: crate::novel::NovelAuditRiskSummary,
-    next_action: String,
-}
-
-fn novel_workspace_summary(workspace: &std::path::Path) -> Option<NovelWorkspaceSummary> {
-    let manifest_path = workspace.join("book.toml");
-    let raw = std::fs::read_to_string(manifest_path).ok()?;
-    let title = toml_string_value(&raw, "title").unwrap_or_else(|| {
-        workspace
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("Untitled")
-            .to_string()
-    });
-    let genre = toml_string_value(&raw, "genre");
-    let current_volume = toml_u32_value(&raw, "current_volume").unwrap_or(1);
-    let manifest_chapter = toml_u32_value(&raw, "current_chapter").unwrap_or(0);
-    let highest_chapter = highest_chapter_number(workspace);
-    let current_chapter = manifest_chapter.max(highest_chapter);
-    let next_chapter = current_chapter.saturating_add(1).max(1);
-    let chapters = count_child_dirs(&workspace.join("chapters"));
-    let drafts = count_chapter_file(workspace, "draft.md");
-    let finals = count_chapter_file(workspace, "final.md");
-    let audits = count_chapter_file(workspace, "audit.md");
-    let summaries = count_files(&workspace.join("memory/summaries"), &[]);
-    let materials = count_files_recursive(&workspace.join("materials"), 3);
-    let character_cards = count_files(&workspace.join("cards/characters"), &["_template.yaml"]);
-    let facts = count_jsonl_records(&workspace.join("memory/facts.jsonl"));
-    let events = count_jsonl_records(&workspace.join("memory/events.jsonl"));
-    let foreshadowing = count_jsonl_records(&workspace.join("memory/foreshadowing.jsonl"));
-    let open_promises = open_promise_preview(&workspace.join("memory/foreshadowing.jsonl"), 3);
-    let memory_graph = workspace.join("memory/graph.json").is_file();
-    let memory_snapshot = crate::novel::memory_snapshot(workspace).ok();
-    let candidate_updates = memory_candidate_count(workspace);
-    let audit_risks = crate::novel::audit_risk_summary(workspace, 3).unwrap_or_default();
-    let next_action = next_book_action(workspace, next_chapter);
-    Some(NovelWorkspaceSummary {
-        title,
-        genre,
-        current_volume,
-        current_chapter,
-        next_chapter,
-        chapters,
-        drafts,
-        finals,
-        audits,
-        summaries,
-        materials,
-        character_cards,
-        facts,
-        events,
-        foreshadowing,
-        open_promises,
-        candidate_updates,
-        memory_graph,
-        promise_statuses: memory_snapshot
-            .as_ref()
-            .map(|snapshot| snapshot.promise_statuses.clone())
-            .unwrap_or_default(),
-        relationship_changes: memory_snapshot
-            .as_ref()
-            .map(|snapshot| snapshot.relationship_changes)
-            .unwrap_or(0),
-        state_changes: memory_snapshot
-            .as_ref()
-            .map(|snapshot| snapshot.state_changes)
-            .unwrap_or(0),
-        relationship_previews: memory_snapshot
-            .as_ref()
-            .map(|snapshot| snapshot.relationship_previews.clone())
-            .unwrap_or_default(),
-        state_change_previews: memory_snapshot
-            .as_ref()
-            .map(|snapshot| snapshot.state_change_previews.clone())
-            .unwrap_or_default(),
-        audit_risks,
-        next_action,
-    })
-}
-
-fn toml_string_value(raw: &str, key: &str) -> Option<String> {
-    raw.lines().find_map(|line| {
-        let (candidate, value) = line.split_once('=')?;
-        if candidate.trim() != key {
-            return None;
-        }
-        let value = value.trim().trim_matches('"').trim_matches('\'');
-        if value.is_empty() {
-            None
-        } else {
-            Some(value.to_string())
-        }
-    })
-}
-
-fn toml_u32_value(raw: &str, key: &str) -> Option<u32> {
-    raw.lines().find_map(|line| {
-        let (candidate, value) = line.split_once('=')?;
-        if candidate.trim() != key {
-            return None;
-        }
-        value.trim().parse::<u32>().ok()
-    })
-}
-
-fn highest_chapter_number(workspace: &std::path::Path) -> u32 {
-    std::fs::read_dir(workspace.join("chapters"))
-        .ok()
-        .into_iter()
-        .flat_map(|entries| entries.filter_map(Result::ok))
-        .filter(|entry| entry.file_type().is_ok_and(|file_type| file_type.is_dir()))
-        .filter_map(|entry| {
-            entry
-                .file_name()
-                .to_str()
-                .and_then(|name| name.parse::<u32>().ok())
-        })
-        .max()
-        .unwrap_or(0)
-}
-
-fn open_promise_preview(path: &std::path::Path, limit: usize) -> Vec<String> {
-    let Some(raw) = std::fs::read_to_string(path).ok() else {
-        return Vec::new();
-    };
-    let mut promises = Vec::new();
-    for line in raw.lines().map(str::trim).filter(|line| !line.is_empty()) {
-        if promises.len() >= limit {
-            break;
-        }
-        let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else {
-            continue;
-        };
-        let status = value
-            .get("status")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or("open");
-        if matches!(
-            status.to_ascii_lowercase().as_str(),
-            "closed" | "resolved" | "paid" | "paid_off" | "payoff" | "applied" | "done"
-        ) {
-            continue;
-        }
-        let label = value
-            .get("promise")
-            .or_else(|| value.get("foreshadowing"))
-            .or_else(|| value.get("target"))
-            .or_else(|| value.get("event"))
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or("unnamed promise");
-        let chapter = value
-            .get("chapter")
-            .or_else(|| value.get("first_chapter"))
-            .and_then(serde_json::Value::as_u64)
-            .map(|chapter| format!("chapter {chapter:03}"))
-            .unwrap_or_else(|| "chapter unknown".to_string());
-        promises.push(format!("{label} | {status} | {chapter}"));
-    }
-    promises
-}
-
-fn next_book_action(workspace: &std::path::Path, next_chapter: u32) -> String {
-    let master_plan = workspace.join("outline/master_plan.md");
-    let plan_ready = std::fs::read_to_string(&master_plan)
-        .ok()
-        .map(|text| text.len() > 80 && !text.contains("运行 `deepseek plan`"))
-        .unwrap_or(false);
-    if !plan_ready {
-        return "/plan".to_string();
-    }
-
-    let mut chapters: Vec<u32> = std::fs::read_dir(workspace.join("chapters"))
-        .ok()
-        .into_iter()
-        .flat_map(|entries| entries.filter_map(Result::ok))
-        .filter(|entry| entry.file_type().is_ok_and(|file_type| file_type.is_dir()))
-        .filter_map(|entry| {
-            entry
-                .file_name()
-                .to_str()
-                .and_then(|name| name.parse::<u32>().ok())
-        })
-        .collect();
-    chapters.sort_unstable();
-    for chapter in chapters {
-        let dir = workspace.join("chapters").join(format!("{chapter:03}"));
-        if !dir.join("brief.md").is_file() {
-            return format!("/brief {chapter}");
-        }
-        if !dir.join("draft.md").is_file() && !dir.join("final.md").is_file() {
-            return format!("/write {chapter}");
-        }
-        if !workspace
-            .join("memory/summaries")
-            .join(format!("{chapter:03}.md"))
-            .is_file()
-        {
-            return format!("/remember {chapter}");
-        }
-    }
-    format!("/brief {next_chapter}")
-}
-
-fn count_child_dirs(path: &std::path::Path) -> usize {
-    std::fs::read_dir(path)
-        .ok()
-        .into_iter()
-        .flat_map(|entries| entries.filter_map(Result::ok))
-        .filter(|entry| entry.file_type().is_ok_and(|file_type| file_type.is_dir()))
-        .count()
-}
-
-fn count_files(path: &std::path::Path, excluded_names: &[&str]) -> usize {
-    std::fs::read_dir(path)
-        .ok()
-        .into_iter()
-        .flat_map(|entries| entries.filter_map(Result::ok))
-        .filter(|entry| {
-            entry.file_type().is_ok_and(|file_type| file_type.is_file())
-                && entry
-                    .file_name()
-                    .to_str()
-                    .is_none_or(|name| !excluded_names.contains(&name))
-        })
-        .count()
-}
-
-fn count_files_recursive(path: &std::path::Path, max_depth: usize) -> usize {
-    if max_depth == 0 || !path.is_dir() {
-        return 0;
-    }
-    std::fs::read_dir(path)
-        .ok()
-        .into_iter()
-        .flat_map(|entries| entries.filter_map(Result::ok))
-        .map(|entry| {
-            if entry.file_type().is_ok_and(|file_type| file_type.is_dir()) {
-                count_files_recursive(&entry.path(), max_depth - 1)
-            } else {
-                let is_readme = entry
-                    .file_name()
-                    .to_str()
-                    .is_some_and(|name| name.eq_ignore_ascii_case("README.md"));
-                usize::from(
-                    entry.file_type().is_ok_and(|file_type| file_type.is_file()) && !is_readme,
-                )
-            }
-        })
-        .sum()
-}
-
-fn count_chapter_file(workspace: &std::path::Path, file_name: &str) -> usize {
-    std::fs::read_dir(workspace.join("chapters"))
-        .ok()
-        .into_iter()
-        .flat_map(|entries| entries.filter_map(Result::ok))
-        .filter(|entry| entry.path().join(file_name).is_file())
-        .count()
-}
-
-fn count_jsonl_records(path: &std::path::Path) -> usize {
-    std::fs::read_to_string(path)
-        .ok()
-        .map(|raw| raw.lines().filter(|line| !line.trim().is_empty()).count())
-        .unwrap_or(0)
-}
-
-fn memory_candidate_count(workspace: &std::path::Path) -> usize {
-    let graph_count = std::fs::read_to_string(workspace.join("memory/graph.json"))
-        .ok()
-        .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
-        .and_then(|value| {
-            value
-                .get("candidate_updates")
-                .and_then(serde_json::Value::as_array)
-                .map(Vec::len)
-        })
-        .unwrap_or(0);
-    let file_count = std::fs::read_dir(workspace.join("memory/candidates"))
-        .ok()
-        .into_iter()
-        .flat_map(|entries| entries.filter_map(Result::ok))
-        .filter_map(|entry| std::fs::read_to_string(entry.path()).ok())
-        .filter_map(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
-        .filter_map(|value| {
-            value
-                .get("candidates")
-                .and_then(serde_json::Value::as_array)
-                .map(Vec::len)
-        })
-        .sum::<usize>();
-    graph_count.max(file_count)
 }
 
 /// Toggle output translation to the current system language on/off.
@@ -1207,7 +916,9 @@ mod tests {
         assert!(
             msg.contains("pending memory: chapter 001 [promise] 事故真相 -> 推进为林墨主动追查")
         );
-        assert!(msg.contains("Next:       /plan"));
+        assert!(msg.contains("Gate:"));
+        assert!(msg.contains("Noise:"));
+        assert!(msg.contains("Next:       deepseek plan"));
         assert!(msg.contains("/map"));
     }
 

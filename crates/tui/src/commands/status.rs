@@ -55,6 +55,57 @@ fn format_status(app: &App) -> String {
             "Memory updates:",
             &format!("{} candidates", novel.candidate_updates),
         );
+        push_row(
+            &mut out,
+            "Workflow gate:",
+            &format!(
+                "{}{}",
+                novel.readiness.quality_gate,
+                if novel.readiness.blocked {
+                    " (blocked)"
+                } else {
+                    ""
+                }
+            ),
+        );
+        push_row(&mut out, "Next action:", &novel.readiness.next_action);
+        push_row(
+            &mut out,
+            "Context score:",
+            &novel
+                .readiness
+                .context_score
+                .map(|score| format!("{score}/100"))
+                .unwrap_or_else(|| "n/a".to_string()),
+        );
+        push_row(
+            &mut out,
+            "Memory pressure:",
+            &format!(
+                "pending {}, recent {}, max/chapter {}, target/chapter {}",
+                novel.readiness.pending_candidates,
+                novel.readiness.candidate_pressure_total,
+                novel.readiness.candidate_pressure_max_per_chapter,
+                novel.readiness.candidate_target_per_chapter
+            ),
+        );
+        push_row(
+            &mut out,
+            "Summary density:",
+            &format!(
+                "avg {}, max {}, overlong {}, canon sparse {}",
+                novel.readiness.recent_summary_avg_chars,
+                novel.readiness.recent_summary_max_chars,
+                novel.readiness.recent_summary_overweight,
+                novel.readiness.recent_summary_canon_sparse
+            ),
+        );
+        for blocker in &novel.readiness.blockers {
+            push_row(&mut out, "Workflow blocker:", blocker);
+        }
+        for warning in novel.readiness.warnings.iter().take(6) {
+            push_row(&mut out, "Workflow warning:", warning);
+        }
         if !novel.promise_statuses.is_empty() {
             push_row(
                 &mut out,
@@ -369,6 +420,11 @@ mod tests {
         assert!(msg.contains("Writer Status"));
         assert!(msg.contains("Book:"));
         assert!(msg.contains("状态测试"));
+        assert!(msg.contains("Workflow gate:"));
+        assert!(msg.contains("Next action:"));
+        assert!(msg.contains("Context score:"));
+        assert!(msg.contains("Memory pressure:"));
+        assert!(msg.contains("Summary density:"));
         assert!(msg.contains("Provider:"));
         assert!(msg.contains("Model:"));
         assert!(msg.contains("Directory:"));
