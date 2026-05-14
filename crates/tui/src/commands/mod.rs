@@ -833,7 +833,7 @@ fn novel_project_map(app: &mut App, arg: Option<&str>) -> CommandResult {
 
 pub(crate) fn build_novel_analysis_prompt(workspace: &std::path::Path, focus: &str) -> String {
     format!(
-        "Analyze this DeepSeek Novel Studio workspace as a long-form manuscript, not as source code.\n\n\
+        "Analyze this Writer workspace as a long-form manuscript, not as source code.\n\n\
          Workspace: {workspace}\n\
          Focus: {focus}\n\n\
          Required method:\n\
@@ -885,7 +885,7 @@ fn novel_plan(app: &mut App, arg: Option<&str>) -> CommandResult {
     let mut message = String::new();
     let _ = writeln!(
         message,
-        "Use DeepSeek Novel Studio's top-level book workflow to generate or refresh this novel's plan."
+        "Use Writer's top-level book workflow to generate or refresh this novel's plan."
     );
     let _ = writeln!(message);
     let _ = writeln!(message, "Workspace: {}", app.workspace.display());
@@ -1046,7 +1046,7 @@ fn build_relay_instruction(app: &App, focus: Option<&str>) -> String {
     let mut out = String::new();
     let _ = writeln!(
         out,
-        "Create a compact session relay (接力) for a future DeepSeek TUI thread."
+        "Create a compact session relay (接力) for a future Writer thread."
     );
     let _ = writeln!(out);
     let _ = writeln!(out, "Write or update `.deepseek/handoff.md`.");

@@ -1,4 +1,4 @@
-# DeepSeek Novel Studio
+# Writer
 
 > Terminal-native long-form fiction studio for DeepSeek V4. It turns a novel into local project assets: story bible, world rules, character cards, chapter briefs, drafts, audits, revisions, continuity memory, and exports.
 
@@ -6,7 +6,7 @@
 
 ## What Is It?
 
-DeepSeek Novel Studio is a local-first novel creation tool. It keeps the book on disk instead of burying it in chat history, so a long project can survive hundreds of chapters without losing continuity.
+Writer is a local-first novel creation tool. It keeps the book on disk instead of burying it in chat history, so a long project can survive hundreds of chapters without losing continuity.
 
 It is built around DeepSeek V4 (`deepseek-v4-pro` / `deepseek-v4-flash`), including 1M-token context windows and thinking-mode responses. The existing terminal runtime remains available, but the default product identity and workflow now target fiction production.
 

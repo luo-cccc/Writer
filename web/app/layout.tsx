@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, IBM_Plex_Sans, JetBrains_Mono, Noto_Serif_SC } from "next/font/google";
+import { getSiteUrl } from "@/lib/site";
 import "./globals.css";
 
 const display = Fraunces({
@@ -33,15 +34,15 @@ const cjk = Noto_Serif_SC({
 });
 
 export const metadata: Metadata = {
-  title: "DeepSeek TUI · 深度求索 终端",
+  title: "Writer · Long-form fiction workspace",
   description:
-    "Terminal-native coding agent built on DeepSeek V4. Open source. Community site for installation, docs, roadmap, and live activity from the Hmbown/deepseek-tui repo.",
-  metadataBase: new URL("https://deepseek-tui.com"),
+    "Terminal-native long-form fiction workspace for DeepSeek V4. Draft community site for installation, docs, roadmap, and release notes.",
+  metadataBase: new URL(getSiteUrl()),
   openGraph: {
-    title: "DeepSeek TUI",
-    description: "Terminal-native coding agent built on DeepSeek V4.",
-    url: "https://deepseek-tui.com",
-    siteName: "DeepSeek TUI",
+    title: "Writer",
+    description: "Terminal-native long-form fiction workspace for DeepSeek V4.",
+    url: getSiteUrl(),
+    siteName: "Writer",
     type: "website",
   },
   twitter: { card: "summary_large_image" },

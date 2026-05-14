@@ -7,10 +7,10 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const { locale } = await params;
   const isZh = locale === "zh";
   return {
-    title: isZh ? "安装 · DeepSeek TUI" : "Install · DeepSeek TUI",
+    title: isZh ? "安装 · Writer" : "Install · Writer",
     description: isZh
-      ? "在 macOS、Linux 或 Windows 上通过 Cargo、npm、Homebrew tap 或预编译二进制安装 deepseek-tui。"
-      : "Install deepseek-tui on macOS, Linux, or Windows via Cargo, npm, the Homebrew tap, or pre-built binaries.",
+      ? "在 macOS、Linux 或 Windows 上通过 Cargo、npm、源码构建或后续 release 二进制安装 Writer。"
+      : "Install Writer on macOS, Linux, or Windows via Cargo, npm, source builds, or later release binaries.",
   };
 }
 
@@ -86,8 +86,8 @@ registry = "sparse+https://mirrors.tuna.tsinghua.edu.cn/crates.io-index/"`}
                 <p className="text-sm text-ink-soft leading-[1.9] tracking-wide mb-3">
                   从 Gitee 发布页直接下载对应平台的预编译二进制文件，解压后即可使用：
                 </p>
-                <Link href="https://gitee.com/Hmbown/deepseek-tui/releases" className="font-mono text-[0.78rem] text-indigo hover:underline">
-                  gitee.com/Hmbown/deepseek-tui/releases →
+                <Link href="https://gitee.com/luo-cccc/Writer/releases" className="font-mono text-[0.78rem] text-indigo hover:underline">
+                  gitee.com/luo-cccc/Writer/releases →
                 </Link>
               </div>}
 
@@ -116,7 +116,7 @@ deepseek auth set --provider deepseek --api-key sk-...`}
             </div>
 
             {GITEE_ENABLED && <div className="mt-6">
-              <Link href="https://gitee.com/Hmbown/deepseek-tui" className="body-link">
+              <Link href="https://gitee.com/luo-cccc/Writer" className="body-link">
                 Gitee 仓库镜像 →
               </Link>
             </div>}

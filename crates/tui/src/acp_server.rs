@@ -197,7 +197,7 @@ impl AcpServer {
             }],
             max_tokens: 4096,
             system: Some(SystemPrompt::Text(
-                "You are DeepSeek Novel Studio inside an ACP-compatible editor. Help with long-form fiction planning, drafting, continuity, revision, and export. Give concise, actionable responses in the user's language.".to_string(),
+                "You are Writer inside an ACP-compatible editor. Help with long-form fiction planning, drafting, continuity, revision, and export. Give concise, actionable responses in the user's language.".to_string(),
             )),
             tools: None,
             tool_choice: None,
@@ -285,7 +285,7 @@ fn initialize_result(client_protocol_version: Option<u64>) -> Value {
         },
         "agentInfo": {
             "name": "deepseek",
-            "title": "DeepSeek Novel Studio",
+            "title": "Writer",
             "version": env!("CARGO_PKG_VERSION")
         },
         "authMethods": []
@@ -413,7 +413,7 @@ mod tests {
 
         assert_eq!(result["protocolVersion"], 1);
         assert_eq!(result["agentInfo"]["name"], "deepseek");
-        assert_eq!(result["agentInfo"]["title"], "DeepSeek Novel Studio");
+        assert_eq!(result["agentInfo"]["title"], "Writer");
         assert_eq!(result["agentCapabilities"]["loadSession"], false);
         assert_eq!(
             result["agentCapabilities"]["promptCapabilities"]["embeddedContext"],

@@ -1077,7 +1077,7 @@ mod tests {
         let result = home_dashboard(&mut app);
         assert!(result.message.is_some());
         let msg = result.message.unwrap();
-        assert!(msg.contains("DeepSeek Novel Studio"));
+        assert!(msg.contains("Writer"));
         assert!(msg.contains("Book:"));
         assert!(msg.contains("Model:"));
         assert!(msg.contains("Mode:"));
@@ -1220,10 +1220,7 @@ mod tests {
         let msg = result
             .message
             .expect("home dashboard should return message");
-        assert!(
-            msg.contains("DeepSeek Novel Studio"),
-            "missing product title:\n{msg}"
-        );
+        assert!(msg.contains("Writer"), "missing product title:\n{msg}");
         assert!(msg.contains("模型"), "missing zh-Hans model label:\n{msg}");
         assert!(
             msg.contains("快捷操作"),

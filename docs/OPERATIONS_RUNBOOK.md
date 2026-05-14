@@ -1,4 +1,4 @@
-# DeepSeek TUI Operations Runbook
+# Writer Operations Runbook
 
 This runbook covers practical debugging and incident response for the local CLI/TUI runtime.
 

@@ -864,7 +864,7 @@ pub struct AutoRouteSelection {
 }
 
 pub const AUTO_MODEL_ROUTER_SYSTEM_PROMPT: &str = "\
-You are the DeepSeek Novel Studio auto-routing classifier. Return only compact JSON: \
+You are the Writer auto-routing classifier. Return only compact JSON: \
 {\"model\":\"deepseek-v4-flash|deepseek-v4-pro\",\"thinking\":\"off|high|max\"}. \
 Use deepseek-v4-flash for trivial chat, status checks, short wording help, or single-step low-risk edits. \
 Use deepseek-v4-pro for long-form planning, chapter drafting, revision, continuity diagnosis, memory graph work, \
@@ -1421,7 +1421,7 @@ mod tests {
 
     #[test]
     fn auto_route_system_prompt_is_novel_studio_oriented() {
-        assert!(AUTO_MODEL_ROUTER_SYSTEM_PROMPT.contains("DeepSeek Novel Studio"));
+        assert!(AUTO_MODEL_ROUTER_SYSTEM_PROMPT.contains("Writer"));
         assert!(AUTO_MODEL_ROUTER_SYSTEM_PROMPT.contains("chapter drafting"));
         assert!(AUTO_MODEL_ROUTER_SYSTEM_PROMPT.contains("continuity diagnosis"));
         assert!(AUTO_MODEL_ROUTER_SYSTEM_PROMPT.contains("memory graph"));

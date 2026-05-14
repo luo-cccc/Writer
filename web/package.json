@@ -1,8 +1,8 @@
 {
-  "name": "deepseek-tui-web",
+  "name": "writer-web",
   "version": "0.1.0",
   "private": true,
-  "description": "Community site for deepseek-tui — deepseek-tui.com",
+  "description": "Draft community site for Writer; not part of the current release path.",
   "scripts": {
     "dev": "node scripts/derive-facts.mjs && next dev",
     "prebuild": "node scripts/derive-facts.mjs",

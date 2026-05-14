@@ -105,7 +105,7 @@ fn configure_windows_console_utf8() {}
     bin_name = "deepseek-tui",
     author,
     version = env!("DEEPSEEK_BUILD_VERSION"),
-    about = "DeepSeek Novel Studio for long-form fiction",
+    about = "Writer for long-form fiction",
     long_about = "Terminal-native long-form fiction studio for DeepSeek models.\n\nRun 'deepseek' to open the novel workspace, 'deepseek init' to create book assets, or top-level commands such as 'deepseek plan', 'deepseek write 1', and 'deepseek memory context 12'.\n\nNot affiliated with DeepSeek Inc."
 )]
 struct Cli {
@@ -1460,7 +1460,7 @@ fn skills_template(name: &str) -> String {
         "\
 ---\n\
 name: {name}\n\
-description: Starter guidance for a DeepSeek Novel Studio book workspace\n\
+description: Starter guidance for a Writer book workspace\n\
 allowed-tools: list_dir, read_file, grep_files\n\
 ---\n\n\
 When this skill is active:\n\
@@ -2060,9 +2060,7 @@ async fn run_doctor(config: &Config, workspace: &Path, config_path_override: Opt
 
     println!(
         "{}",
-        "DeepSeek TUI Doctor"
-            .truecolor(blue_r, blue_g, blue_b)
-            .bold()
+        "Writer Doctor".truecolor(blue_r, blue_g, blue_b).bold()
     );
     println!("{}", "==================".truecolor(sky_r, sky_g, sky_b));
     println!();
@@ -4832,7 +4830,7 @@ async fn run_one_shot(config: &Config, model: &str, prompt: &str) -> Result<()> 
         }],
         max_tokens: 4096,
         system: Some(SystemPrompt::Text(
-            "You are DeepSeek Novel Studio, a long-form fiction planning, drafting, continuity, and editing assistant. Give concise, actionable responses in the user's language.".to_string(),
+            "You are Writer, a long-form fiction planning, drafting, continuity, and editing assistant. Give concise, actionable responses in the user's language.".to_string(),
         )),
         tools: None,
         tool_choice: None,
@@ -4876,7 +4874,7 @@ async fn run_one_shot_json(config: &Config, model: &str, prompt: &str) -> Result
         }],
         max_tokens: 4096,
         system: Some(SystemPrompt::Text(
-            "You are DeepSeek Novel Studio, a long-form fiction planning, drafting, continuity, and editing assistant. Give concise, actionable responses in the user's language.".to_string(),
+            "You are Writer, a long-form fiction planning, drafting, continuity, and editing assistant. Give concise, actionable responses in the user's language.".to_string(),
         )),
         tools: None,
         tool_choice: None,
@@ -6835,7 +6833,7 @@ mod setup_helper_tests {
     #[test]
     fn setup_skills_template_is_novel_studio_oriented() {
         let body = skills_template("getting-started");
-        assert!(body.contains("DeepSeek Novel Studio"));
+        assert!(body.contains("Writer"));
         assert!(body.contains("book.toml"));
         assert!(body.contains("bible/"));
         assert!(body.contains("memory/"));

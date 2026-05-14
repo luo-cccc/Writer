@@ -3,15 +3,15 @@
   "version": "0.8.33",
   "deepseekBinaryVersion": "0.8.33",
   "description": "Install and run deepseek and deepseek-tui binaries from GitHub release artifacts.",
-  "author": "Hmbown",
+  "author": "luo-cccc",
   "license": "MIT",
-  "homepage": "https://github.com/Hmbown/DeepSeek-TUI",
+  "homepage": "https://github.com/luo-cccc/Writer",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Hmbown/DeepSeek-TUI.git"
+    "url": "git+https://github.com/luo-cccc/Writer.git"
   },
   "bugs": {
-    "url": "https://github.com/Hmbown/DeepSeek-TUI/issues"
+    "url": "https://github.com/luo-cccc/Writer/issues"
   },
   "keywords": [
     "deepseek",

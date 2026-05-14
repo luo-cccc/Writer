@@ -55,7 +55,7 @@ function detectBinaryNames() {
 function unsupportedBuildHint() {
   return [
     "No prebuilt binary is available for this platform/architecture combo.",
-    "You can still run DeepSeek TUI by building from source with Cargo:",
+    "You can still run Writer by building from source with Cargo:",
     "",
     "  # Requires Rust 1.88+ (https://rustup.rs)",
     "  cargo install deepseek-tui-cli --locked   # provides `deepseek`",
@@ -63,12 +63,12 @@ function unsupportedBuildHint() {
     "",
     "Or build from a checkout:",
     "",
-    "  git clone https://github.com/Hmbown/DeepSeek-TUI.git",
-    "  cd DeepSeek-TUI",
+    "  git clone https://github.com/luo-cccc/Writer.git",
+    "  cd Writer",
     "  cargo install --path crates/cli --locked",
     "  cargo install --path crates/tui --locked",
     "",
-    "See https://github.com/Hmbown/DeepSeek-TUI/blob/main/docs/INSTALL.md",
+    "See https://github.com/luo-cccc/Writer/blob/main/docs/INSTALL.md",
     "for cross-compilation, mirror, and Linux ARM64 specifics.",
   ].join("\n");
 }
@@ -77,7 +77,7 @@ function executableName(base, platform) {
   return platform === "win32" ? `${base}.exe` : base;
 }
 
-function releaseBaseUrl(version, repo = "Hmbown/DeepSeek-TUI") {
+function releaseBaseUrl(version, repo = "luo-cccc/Writer") {
   const override =
     process.env.DEEPSEEK_TUI_RELEASE_BASE_URL || process.env.DEEPSEEK_RELEASE_BASE_URL;
   if (override) {
@@ -87,11 +87,11 @@ function releaseBaseUrl(version, repo = "Hmbown/DeepSeek-TUI") {
   return `https://github.com/${repo}/releases/download/v${version}/`;
 }
 
-function releaseAssetUrl(baseName, version, repo = "Hmbown/DeepSeek-TUI") {
+function releaseAssetUrl(baseName, version, repo = "luo-cccc/Writer") {
   return new URL(baseName, releaseBaseUrl(version, repo)).toString();
 }
 
-function checksumManifestUrl(version, repo = "Hmbown/DeepSeek-TUI") {
+function checksumManifestUrl(version, repo = "luo-cccc/Writer") {
   return releaseAssetUrl(CHECKSUM_MANIFEST, version, repo);
 }
 

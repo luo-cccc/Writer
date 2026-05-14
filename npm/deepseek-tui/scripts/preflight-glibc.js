@@ -66,7 +66,7 @@ function detectBinaryRequiredGlibc(filePath) {
 
 function buildFromSourceHint() {
   return [
-    "You can still run DeepSeek TUI by building from source with Cargo:",
+    "You can still run Writer by building from source with Cargo:",
     "",
     "  # Requires Rust 1.88+ (https://rustup.rs)",
     "  cargo install deepseek-tui-cli --locked   # provides `deepseek`",
@@ -74,12 +74,12 @@ function buildFromSourceHint() {
     "",
     "Or build from a checkout:",
     "",
-    "  git clone https://github.com/Hmbown/DeepSeek-TUI.git",
-    "  cd DeepSeek-TUI",
+    "  git clone https://github.com/luo-cccc/Writer.git",
+    "  cd Writer",
     "  cargo install --path crates/cli --locked",
     "  cargo install --path crates/tui --locked",
     "",
-    "See https://github.com/Hmbown/DeepSeek-TUI/blob/main/docs/INSTALL.md",
+    "See https://github.com/luo-cccc/Writer/blob/main/docs/INSTALL.md",
   ].join("\n");
 }
 
@@ -115,7 +115,7 @@ function preflightGlibc(filePath) {
   if (compareVersion(host, required) < 0) {
     throw new Error(
       [
-        `Prebuilt DeepSeek TUI binary requires GLIBC_${formatVersion(required)} but this system has glibc ${formatVersion(host)}.`,
+        `Prebuilt Writer binary requires GLIBC_${formatVersion(required)} but this system has glibc ${formatVersion(host)}.`,
         "Older distros (CentOS 7/8, RHEL 7/8, Debian 10, etc.) ship an older glibc that is not compatible with the prebuilt artifact.",
         "",
         buildFromSourceHint(),

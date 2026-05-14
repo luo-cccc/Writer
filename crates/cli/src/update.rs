@@ -1,7 +1,7 @@
 //! Self-update for the `deepseek` binary.
 //!
 //! The `update` subcommand fetches the latest release from
-//! `github.com/Hmbown/DeepSeek-TUI/releases/latest`, downloads the
+//! `github.com/luo-cccc/Writer/releases/latest`, downloads the
 //! platform-correct binary, verifies its SHA256 checksum, and atomically
 //! replaces the currently running binary.
 
@@ -12,7 +12,7 @@ use anyhow::{Context, Result, bail};
 use std::io::Write;
 
 const CHECKSUM_MANIFEST_ASSET: &str = "deepseek-artifacts-sha256.txt";
-const LATEST_RELEASE_URL: &str = "https://api.github.com/repos/Hmbown/DeepSeek-TUI/releases/latest";
+const LATEST_RELEASE_URL: &str = "https://api.github.com/repos/luo-cccc/Writer/releases/latest";
 const UPDATE_USER_AGENT: &str = "deepseek-tui-updater";
 
 /// Run the self-update workflow.

@@ -1,4 +1,4 @@
-# DeepSeek TUI Release Runbook
+# Writer Release Runbook
 
 This runbook is the source of truth for shipping Rust crates, GitHub release assets,
 and the `deepseek-tui` npm wrapper.
@@ -182,19 +182,16 @@ To re-enable automated publish: provision an npm automation token with "Bypass 2
 
 ## CNB Cool mirror
 
-Every push to `main` and every `v*` tag is mirrored to
-`cnb.cool/deepseek-tui.com/DeepSeek-TUI` via the `Sync to CNB` workflow
-so users behind GitHub-blocking networks can fetch the source. After a
-release tag, **verify the mirror caught it** before declaring the
-release shipped:
+CNB mirroring is optional for Writer and is not a release blocker unless a
+maintainer explicitly configures a live CNB destination. The `Sync to CNB`
+workflow is dispatch-only. If you have configured `CNB_GIT_TOKEN` and a CNB
+repository, run:
 
 ```bash
-git ls-remote https://cnb.cool/deepseek-tui.com/DeepSeek-TUI.git refs/tags/vX.Y.Z
+gh workflow run sync-cnb.yml --repo luo-cccc/Writer -f cnb_repo=<cnb-owner>/<repo>
 ```
 
-If the workflow failed for the release tag, the manual fallback is
-documented in [docs/CNB_MIRROR.md](CNB_MIRROR.md) (one-time `git
-remote add cnb …`, then `git push cnb vX.Y.Z`).
+Manual fallback details are documented in [docs/CNB_MIRROR.md](CNB_MIRROR.md).
 
 ## Recovery and Rollback
 
@@ -210,7 +207,7 @@ remote add cnb …`, then `git push cnb vX.Y.Z`).
   - repack and republish the wrapper
 - A bad npm publish cannot be overwritten:
   - publish a new npm version with corrected metadata or install logic
-- CNB mirror failed for the release tag:
-  - check the run via `gh run list --workflow=sync-cnb.yml`
-  - retrigger with `gh workflow run sync-cnb.yml`, or push the tag
-    manually per [docs/CNB_MIRROR.md](CNB_MIRROR.md#manual-fallback)
+- Optional CNB mirror failed:
+  - check whether `CNB_GIT_TOKEN` and the requested CNB repository are configured
+  - rerun `gh workflow run sync-cnb.yml --repo luo-cccc/Writer -f cnb_repo=<path>`,
+    or push manually per [docs/CNB_MIRROR.md](CNB_MIRROR.md#manual-git-fallback)

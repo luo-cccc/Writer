@@ -6,10 +6,10 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const { locale } = await params;
   const isZh = locale === "zh";
   return {
-    title: isZh ? "文档 · DeepSeek TUI" : "Docs · DeepSeek TUI",
+    title: isZh ? "文档 · Writer" : "Docs · Writer",
     description: isZh
-      ? "DeepSeek TUI 的工作原理：模式、工具、沙箱、MCP、配置、钩子。"
-      : "How DeepSeek TUI works: modes, tools, sandbox, MCP, config, hooks.",
+      ? "Writer 的工作原理：模式、工具、沙箱、MCP、配置、钩子。"
+      : "How Writer works: modes, tools, sandbox, MCP, config, hooks.",
   };
 }
 
@@ -55,7 +55,7 @@ export default async function DocsPage({ params }: { params: Promise<{ locale: s
             </h1>
             <p className="mt-5 max-w-3xl text-ink-soft text-lg leading-[1.9] tracking-wide">
               工作原理简述。完整的架构讲解请参阅仓库中的
-              <Link href="https://github.com/Hmbown/deepseek-tui/blob/main/docs/ARCHITECTURE.md" className="body-link mx-1">docs/ARCHITECTURE.md</Link>。
+              <Link href="https://github.com/luo-cccc/Writer/blob/main/docs/ARCHITECTURE.md" className="body-link mx-1">docs/ARCHITECTURE.md</Link>。
             </p>
           </section>
 
@@ -181,7 +181,7 @@ event = "session_start"                     # 也支持: tool_call_before / tool
 command = "~/.deepseek/hooks/pre.sh"        # / message_submit / mode_change / on_error / shell_env`}
                 </pre>
                 <p className="mt-4 text-sm text-ink-soft">
-                  完整参考：<Link className="body-link" href="https://github.com/Hmbown/deepseek-tui/blob/main/config.example.toml">config.example.toml</Link>。
+                  完整参考：<Link className="body-link" href="https://github.com/luo-cccc/Writer/blob/main/config.example.toml">config.example.toml</Link>。
                 </p>
               </section>
 
@@ -283,7 +283,7 @@ command = "~/.deepseek/hooks/pre.sh"        # / message_submit / mode_change / o
             </h1>
             <p className="mt-5 max-w-3xl text-ink-soft text-lg leading-relaxed">
               The short version of how it works. For the full architecture walk-through, see
-              <Link href="https://github.com/Hmbown/deepseek-tui/blob/main/docs/ARCHITECTURE.md" className="body-link mx-1">docs/ARCHITECTURE.md</Link>
+              <Link href="https://github.com/luo-cccc/Writer/blob/main/docs/ARCHITECTURE.md" className="body-link mx-1">docs/ARCHITECTURE.md</Link>
               in the repo.
             </p>
           </section>
@@ -406,7 +406,7 @@ event = "session_start"                     # or: tool_call_before / tool_call_a
 command = "~/.deepseek/hooks/pre.sh"        # / message_submit / mode_change / on_error / shell_env`}
                 </pre>
                 <p className="mt-4 text-sm text-ink-soft">
-                  Full reference: <Link className="body-link" href="https://github.com/Hmbown/deepseek-tui/blob/main/config.example.toml">config.example.toml</Link>.
+                  Full reference: <Link className="body-link" href="https://github.com/luo-cccc/Writer/blob/main/config.example.toml">config.example.toml</Link>.
                 </p>
               </section>
 

@@ -1,4 +1,4 @@
-# Installing DeepSeek TUI
+# Installing Writer
 
 This page covers every supported install path and the most common
 "it didn't install" failures, including **Linux ARM64** and other less
@@ -141,16 +141,19 @@ is fastest from your network.
 ## 4. Manual download from GitHub Releases
 
 Grab the matching pair of binaries for your platform from the
-[Releases page](https://github.com/Hmbown/DeepSeek-TUI/releases) and drop them
+[Releases page](https://github.com/luo-cccc/Writer/releases) and drop them
 side by side into a directory on your `PATH` (e.g. `~/.local/bin`):
+
+The `luo-cccc/Writer` repository must have a published release tag before this
+path works. Until then, use npm, Cargo, or [Build from source](#5-build-from-source).
 
 ```bash
 # Linux ARM64 example
 mkdir -p ~/.local/bin
 curl -L -o ~/.local/bin/deepseek      \
-    https://github.com/Hmbown/DeepSeek-TUI/releases/latest/download/deepseek-linux-arm64
+    https://github.com/luo-cccc/Writer/releases/latest/download/deepseek-linux-arm64
 curl -L -o ~/.local/bin/deepseek-tui  \
-    https://github.com/Hmbown/DeepSeek-TUI/releases/latest/download/deepseek-tui-linux-arm64
+    https://github.com/luo-cccc/Writer/releases/latest/download/deepseek-tui-linux-arm64
 chmod +x ~/.local/bin/deepseek ~/.local/bin/deepseek-tui
 deepseek --version
 ```
@@ -159,7 +162,7 @@ Verify integrity against the per-release SHA-256 manifest:
 
 ```bash
 curl -L -o /tmp/deepseek-artifacts-sha256.txt \
-    https://github.com/Hmbown/DeepSeek-TUI/releases/latest/download/deepseek-artifacts-sha256.txt
+    https://github.com/luo-cccc/Writer/releases/latest/download/deepseek-artifacts-sha256.txt
 ( cd ~/.local/bin && sha256sum -c /tmp/deepseek-artifacts-sha256.txt --ignore-missing )
 ```
 
@@ -167,7 +170,8 @@ curl -L -o /tmp/deepseek-artifacts-sha256.txt \
 
 ### Windows Scoop
 
-DeepSeek TUI is listed in Scoop's main bucket:
+The public Scoop `deepseek-tui` manifest currently tracks the legacy upstream
+release. Use it only when that is acceptable:
 
 ```powershell
 scoop update
@@ -175,9 +179,8 @@ scoop install deepseek-tui
 deepseek --version
 ```
 
-Scoop manifests are maintained outside this repository's release workflow and
-can lag GitHub/npm/Cargo releases. Use npm or manual GitHub release downloads
-when you need the newest version immediately.
+Scoop is not part of the Writer release gate yet. Use npm, Cargo, or a manual
+Writer release download when you need the current Writer build.
 
 ---
 
@@ -200,8 +203,8 @@ LoongArch, FreeBSD, and pre-2024 ARM64 distros.
 ### Build and install
 
 ```bash
-git clone https://github.com/Hmbown/DeepSeek-TUI.git
-cd DeepSeek-TUI
+git clone https://github.com/luo-cccc/Writer.git
+cd Writer
 
 cargo install --path crates/cli --locked   # provides `deepseek`
 cargo install --path crates/tui --locked   # provides `deepseek-tui`
@@ -303,8 +306,8 @@ that session and run `cargo build` from the project root.
 **Build**
 
 ```bash
-git clone https://github.com/Hmbown/DeepSeek-TUI.git
-cd DeepSeek-TUI
+git clone https://github.com/luo-cccc/Writer.git
+cd Writer
 set CARGO_HTTP_CHECK_REVOKE=false   # may be needed behind some Chinese ISPs
 cargo build --release
 ```
@@ -339,7 +342,7 @@ cargo install deepseek-tui     --locked
 
 ### `deepseek update` reports `no asset found for platform deepseek-linux-aarch64`
 
-This is [#503](https://github.com/Hmbown/DeepSeek-TUI/issues/503) in v0.8.7 —
+This is [#503](https://github.com/luo-cccc/Writer/issues/503) in v0.8.7 —
 the self-updater used Rust's `aarch64`/`x86_64` arch names instead of the
 release artifact's `arm64`/`x64`. Workaround until v0.8.8:
 
@@ -459,7 +462,7 @@ Use one of these paths:
 2. Mirror the release assets internally and set `DEEPSEEK_TUI_RELEASE_BASE_URL`:
 
    ```bash
-   export DEEPSEEK_TUI_RELEASE_BASE_URL=https://your-mirror.example.com/DeepSeek-TUI/
+   export DEEPSEEK_TUI_RELEASE_BASE_URL=https://your-mirror.example.com/Writer/
    deepseek
    ```
 
@@ -470,7 +473,7 @@ Use one of these paths:
    assets. See [Section 3](#3-install-via-cargo-any-tier-1-rust-target).
 
 4. Download both `deepseek` and `deepseek-tui` manually from the
-   [Releases page](https://github.com/Hmbown/DeepSeek-TUI/releases), place them
+   [Releases page](https://github.com/luo-cccc/Writer/releases), place them
    in a directory on `PATH`, and make them executable. See
    [Section 4](#4-manual-download-from-github-releases).
 

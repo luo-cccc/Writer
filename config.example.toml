@@ -1,5 +1,5 @@
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║                         DeepSeek TUI Configuration                            ║
+# ║                         Writer Configuration                            ║
 # ║                                                                              ║
 # ║  Unofficial CLI for DeepSeek Platform - Not affiliated with DeepSeek Inc.     ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
@@ -273,7 +273,7 @@ max_subagents = 10 # optional (1-20)
 # be asked once and can persist) before running it.
 #
 # [skills]
-# registry_url = "https://raw.githubusercontent.com/Hmbown/deepseek-skills/main/index.json"
+# registry_url = "https://raw.githubusercontent.com/luo-cccc/deepseek-skills/main/index.json"
 # max_install_size_bytes = 5_242_880
 
 # ─────────────────────────────────────────────────────────────────────────────────
@@ -515,7 +515,7 @@ default_text_model = "deepseek-ai/deepseek-v4-pro"
 #
 # [[hooks.hooks]]
 # event = "session_start"
-# command = "echo 'DeepSeek TUI session started'"
+# command = "echo 'Writer session started'"
 #
 # # Inject ephemeral creds into every shell call. Output one
 # # KEY=VALUE per line on stdout (export prefix optional).

@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const { locale } = await params;
   const isZh = locale === "zh";
   return {
-    title: isZh ? "路线图 · DeepSeek TUI" : "Roadmap · DeepSeek TUI",
+    title: isZh ? "路线图 · Writer" : "Roadmap · Writer",
     description: isZh
       ? "已确认、正在评估和已排除的功能规划。"
       : "What's confirmed, what's being weighed, what's been ruled out for deepseek-tui.",
@@ -50,8 +50,8 @@ const tracksEn = [
     items: [
       { title: "Web UI / share-link mode", note: "Local web interface over serve --http; curated, generated static share links (#471, #481)" },
       { title: "Exa web-search backend", note: "Bundled alternative to the existing DDG + Bing path (#431)" },
-      { title: "Homebrew core formula", note: "Tap exists; pursuing homebrew-core inclusion" },
-      { title: "Native Windows installer", note: "MSI / WinGet; Scoop manifest already ships" },
+      { title: "Homebrew packaging", note: "No luo-cccc tap is published yet; keep Cargo/npm/source as the supported paths" },
+      { title: "Native Windows installer", note: "MSI / WinGet; Scoop should wait for a Writer release" },
     ],
   },
   {
@@ -101,8 +101,8 @@ const tracksZh = [
     items: [
       { title: "Web 界面 / 分享链接模式", note: "通过 serve --http 提供本地 Web 界面；精选静态分享链接（#471、#481）" },
       { title: "Exa 网页搜索后端", note: "内建替代 DDG + Bing 的搜索路由（#431）" },
-      { title: "Homebrew 核心仓库", note: "Tap 已有；正在争取进入 homebrew-core" },
-      { title: "Windows 原生安装器", note: "MSI / WinGet；Scoop 清单已发布" },
+      { title: "Homebrew 打包", note: "luo-cccc tap 尚未发布；当前支持 Cargo、npm 和源码安装" },
+      { title: "Windows 原生安装器", note: "MSI / WinGet；Scoop 应等待 Writer release 后再切换" },
     ],
   },
   {
@@ -172,7 +172,7 @@ export default async function RoadmapPage({ params }: { params: Promise<{ locale
             </h1>
             <p className="mt-5 max-w-3xl text-ink-soft text-lg leading-[1.9] tracking-wide">
               已确认的功能、正在权衡的方案、以及已被排除的方向。未列在此页的内容均可在{" "}
-              <Link href="https://github.com/Hmbown/deepseek-tui/discussions/new?category=ideas" className="body-link">
+              <Link href="https://github.com/luo-cccc/Writer/discussions/new?category=ideas" className="body-link">
                 Discussions
               </Link>{" "}
               中讨论。
@@ -217,13 +217,13 @@ export default async function RoadmapPage({ params }: { params: Promise<{ locale
               </div>
               <div className="lg:col-span-4 flex flex-col gap-3">
                 <Link
-                  href="https://github.com/Hmbown/deepseek-tui/discussions/new?category=ideas"
+                  href="https://github.com/luo-cccc/Writer/discussions/new?category=ideas"
                   className="px-5 py-3 bg-indigo text-paper font-mono text-sm uppercase tracking-wider text-center hover:bg-indigo-deep transition-colors"
                 >
                   提交想法 →
                 </Link>
                 <Link
-                  href="https://github.com/Hmbown/deepseek-tui/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22"
+                  href="https://github.com/luo-cccc/Writer/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22"
                   className="px-5 py-3 hairline-t hairline-b hairline-l hairline-r border-paper-deep/30 font-mono text-sm uppercase tracking-wider text-center hover:bg-paper hover:text-ink transition-colors"
                 >
                   Good first issues →
@@ -245,7 +245,7 @@ export default async function RoadmapPage({ params }: { params: Promise<{ locale
             <p className="mt-5 max-w-3xl text-ink-soft text-lg leading-relaxed">
               What's confirmed, what's being weighed, what's been ruled out. Anything not on this page
               is fair game for{" "}
-              <Link href="https://github.com/Hmbown/deepseek-tui/discussions/new?category=ideas" className="body-link">
+              <Link href="https://github.com/luo-cccc/Writer/discussions/new?category=ideas" className="body-link">
                 discussion
               </Link>.
             </p>
@@ -290,13 +290,13 @@ export default async function RoadmapPage({ params }: { params: Promise<{ locale
               </div>
               <div className="lg:col-span-4 flex flex-col gap-3">
                 <Link
-                  href="https://github.com/Hmbown/deepseek-tui/discussions/new?category=ideas"
+                  href="https://github.com/luo-cccc/Writer/discussions/new?category=ideas"
                   className="px-5 py-3 bg-indigo text-paper font-mono text-sm uppercase tracking-wider text-center hover:bg-indigo-deep transition-colors"
                 >
                   Propose an idea →
                 </Link>
                 <Link
-                  href="https://github.com/Hmbown/deepseek-tui/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22"
+                  href="https://github.com/luo-cccc/Writer/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22"
                   className="px-5 py-3 hairline-t hairline-b hairline-l hairline-r border-paper-deep/30 font-mono text-sm uppercase tracking-wider text-center hover:bg-paper hover:text-ink transition-colors"
                 >
                   Good first issues →

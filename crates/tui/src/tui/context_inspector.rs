@@ -396,7 +396,7 @@ mod tests {
         app.system_prompt = Some(SystemPrompt::Blocks(vec![
             SystemBlock {
                 block_type: "text".to_string(),
-                text: "## Stable Base\n\nYou are DeepSeek TUI.".to_string(),
+                text: "## Stable Base\n\nYou are Writer.".to_string(),
                 cache_control: None,
             },
             SystemBlock {
@@ -456,7 +456,7 @@ mod tests {
     fn inspector_text_prompt_shows_single_blob() {
         let mut app = test_app();
         app.system_prompt = Some(SystemPrompt::Text(
-            "You are DeepSeek TUI.\n## Repo Working Set\nsrc/".to_string(),
+            "You are Writer.\n## Repo Working Set\nsrc/".to_string(),
         ));
 
         let text = build_context_inspector_text(&app);

@@ -25,7 +25,10 @@ async function checkAuth(req: Request, env: CommunityAgentEnv): Promise<{ ok: bo
 }
 
 const ALLOWED_ACTIONS = new Set(["post", "discard"]);
-const ALLOWED_ORIGINS = new Set(["https://deepseek-tui.com", "https://www.deepseek-tui.com"]);
+const configuredSiteUrl = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
+const ALLOWED_ORIGINS = new Set(
+  configuredSiteUrl ? [new URL(configuredSiteUrl).origin] : ["http://localhost:3000"]
+);
 const MAX_BODY_BYTES = 65_536;
 
 export async function POST(req: Request) {
@@ -90,7 +93,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "no target number" }, { status: 400 });
     }
 
-    const repo = env.GITHUB_REPO ?? "Hmbown/deepseek-tui";
+    const repo = env.GITHUB_REPO ?? "luo-cccc/Writer";
     const commentUrl = `https://api.github.com/repos/${repo}/issues/${draft.targetNumber}/comments`;
 
     const ghRes = await fetch(commentUrl, {

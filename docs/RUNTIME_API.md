@@ -1,6 +1,6 @@
 # Runtime API & Integration Contract
 
-DeepSeek TUI exposes a local runtime API through `deepseek serve --http` and
+Writer exposes a local runtime API through `deepseek serve --http` and
 machine-readable health via `deepseek doctor --json`. It also exposes
 `deepseek serve --acp` for editor clients that speak the Agent Client Protocol
 over stdio. This document is the stable integration contract for native macOS

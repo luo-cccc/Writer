@@ -1,6 +1,6 @@
 # Accessibility
 
-DeepSeek-TUI runs in a terminal, so the platform's own accessibility
+Writer runs in a terminal, so the platform's own accessibility
 stack (screen readers, magnifiers, terminal-level themes) does most
 of the work. The TUI provides a small set of toggles that reduce
 visual motion and density for screen-reader and low-motion users.
@@ -61,14 +61,14 @@ unsetting the env var is the way to honor your saved choice.
   Terminal) will pass the rendered content straight through.
 * If you find a UI surface that still produces motion when
   `low_motion = true`, please file an issue against
-  [`PRIOR: Screen-reader / accessibility flag`](https://github.com/Hmbown/DeepSeek-TUI/issues/450)
+  [`PRIOR: Screen-reader / accessibility flag`](https://github.com/luo-cccc/Writer/issues/450)
   with a screenshot or terminal recording.
 
 ## Related issues / history
 
-* [#450](https://github.com/Hmbown/DeepSeek-TUI/issues/450) —
+* [#450](https://github.com/luo-cccc/Writer/issues/450) —
   documenting the existing flag, adding the `NO_ANIMATIONS`
   startup overlay, and writing this page.
-* [#449](https://github.com/Hmbown/DeepSeek-TUI/issues/449) —
+* [#449](https://github.com/luo-cccc/Writer/issues/449) —
   footer statusline now uses the active theme's contrast pair
   instead of a bespoke palette.

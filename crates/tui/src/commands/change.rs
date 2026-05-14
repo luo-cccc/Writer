@@ -3,7 +3,7 @@
 //!
 //! Usage: `/change`
 //!
-//! Uses the DeepSeek-TUI changelog embedded at compile time, extracts the
+//! Uses the Writer changelog embedded at compile time, extracts the
 //! most recent version section, and displays it. When the UI locale is not
 //! English and the current session can reach a model, the command also fires a
 //! `SendMessage` action that asks the model to translate the changelog into
@@ -26,7 +26,7 @@ pub fn change(app: &mut App) -> CommandResult {
         Some(s) => s,
         None => {
             return CommandResult::error(
-                "Could not find a version section in the bundled DeepSeek-TUI changelog. \
+                "Could not find a version section in the bundled Writer changelog. \
                  Expected a line starting with `## [`. "
                     .to_string(),
             );
@@ -93,7 +93,7 @@ fn inline_changelog_section(section: &str) -> String {
     format!(
         "{truncated}\n\
 \n\
-[... {} characters omitted from the bundled DeepSeek-TUI changelog]",
+[... {} characters omitted from the bundled Writer changelog]",
         section.len() - MAX_INLINE_CHANGELOG_CHARS
     )
 }

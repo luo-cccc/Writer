@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# DeepSeek-TUI multi-arch Docker image (#501)
+# Writer multi-arch Docker image (#501)
 #
 # Build:  docker buildx build --platform linux/amd64,linux/arm64 -t deepseek-tui:latest .
 # Run:    docker run --rm -it -e DEEPSEEK_API_KEY -v deepseek-tui-home:/home/deepseek/.deepseek deepseek-tui

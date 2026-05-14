@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import { locales, type Locale } from "@/lib/i18n/config";
+import { getSiteUrl } from "@/lib/site";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -10,19 +11,20 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
   const isZh = locale === "zh";
+  const siteUrl = getSiteUrl();
   return {
-    title: isZh ? "DeepSeek TUI · 终端原生编程智能体" : "DeepSeek TUI · 深度求索 终端",
+    title: isZh ? "Writer · 长篇小说工作台" : "Writer · Long-form fiction workspace",
     description: isZh
-      ? "基于 DeepSeek V4 的开源终端编程智能体。支持 100 万 token 上下文、MCP 协议、沙箱执行。"
-      : "Terminal-native coding agent built on DeepSeek V4. Open source. Community site for installation, docs, roadmap, and live activity from the Hmbown/deepseek-tui repo.",
-    metadataBase: new URL("https://deepseek-tui.com"),
+      ? "基于 DeepSeek V4 的本地优先长篇小说创作工作台。支持故事工程、章节创作、审稿、修订和连续性记忆。"
+      : "Terminal-native long-form fiction workspace for DeepSeek V4. Draft community site for installation, docs, roadmap, and release notes.",
+    metadataBase: new URL(siteUrl),
     openGraph: {
-      title: isZh ? "DeepSeek TUI · 终端原生编程智能体" : "DeepSeek TUI",
+      title: isZh ? "Writer · 长篇小说工作台" : "Writer",
       description: isZh
-        ? "基于 DeepSeek V4 的开源终端编程智能体。"
-        : "Terminal-native coding agent built on DeepSeek V4.",
-      url: "https://deepseek-tui.com",
-      siteName: "DeepSeek TUI",
+        ? "基于 DeepSeek V4 的本地优先长篇小说创作工作台。"
+        : "Terminal-native long-form fiction workspace for DeepSeek V4.",
+      url: siteUrl,
+      siteName: "Writer",
       type: "website",
     },
     twitter: { card: "summary_large_image" },

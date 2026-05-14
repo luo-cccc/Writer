@@ -1897,10 +1897,7 @@ fn build_empty_state_lines(app: &App, area: Rect) -> Vec<Line<'static>> {
 
     let body = vec![
         Line::from(Span::styled(
-            format!(
-                "{inset}>_ DeepSeek Novel Studio (v{})",
-                env!("CARGO_PKG_VERSION")
-            ),
+            format!("{inset}>_ Writer (v{})", env!("CARGO_PKG_VERSION")),
             Style::default().fg(palette::DEEPSEEK_BLUE).bold(),
         )),
         Line::from(""),
@@ -2791,10 +2788,7 @@ mod tests {
             .collect::<Vec<_>>()
             .join("\n");
 
-        assert!(rendered.contains(&format!(
-            ">_ DeepSeek Novel Studio (v{})",
-            env!("CARGO_PKG_VERSION")
-        )));
+        assert!(rendered.contains(&format!(">_ Writer (v{})", env!("CARGO_PKG_VERSION"))));
         assert!(rendered.contains("book: deepseek-test-workspace"));
         assert!(rendered.contains("memory: book.toml + bible/cards/chapters/graph"));
         assert!(rendered.contains("model: deepseek-v4-pro  /model to switch"));

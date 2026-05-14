@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Crates published for each DeepSeek TUI release, in dependency order.
+# Crates published for each Writer release, in dependency order.
 release_crates=(
   deepseek-secrets
   deepseek-config

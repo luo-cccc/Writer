@@ -20,7 +20,7 @@ fn format_status(app: &App) -> String {
 
     let novel = crate::novel::workspace_summary(&app.workspace).ok();
 
-    let _ = writeln!(out, "DeepSeek Novel Studio Status");
+    let _ = writeln!(out, "Writer Status");
     let _ = writeln!(out, "============================");
     let _ = writeln!(out);
     if let Some(novel) = &novel {
@@ -366,7 +366,7 @@ mod tests {
 
         let result = status(&mut app);
         let msg = result.message.expect("status message");
-        assert!(msg.contains("DeepSeek Novel Studio Status"));
+        assert!(msg.contains("Writer Status"));
         assert!(msg.contains("Book:"));
         assert!(msg.contains("状态测试"));
         assert!(msg.contains("Provider:"));

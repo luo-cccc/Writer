@@ -1013,6 +1013,7 @@ fn init_project(
         "eval/reports",
         "eval/rubrics",
         "experiments/configs",
+        "experiments/baselines",
         "experiments/runs",
         "experiments/reports",
         "leaderboard",
@@ -1115,6 +1116,11 @@ fn init_project(
     write_text(
         &workspace.join("experiments/README.md"),
         EXPERIMENTS_README,
+        force,
+    )?;
+    write_text(
+        &workspace.join("experiments/baselines/long_form_acceptance.md"),
+        LONG_FORM_ACCEPTANCE_BASELINE,
         force,
     )?;
     write_text(
@@ -2140,7 +2146,7 @@ async fn audit_chapter(
          3. `## MINOR`：局部可修问题。\n\
          4. `## AFFECTED_NODES`：受影响人物、地点、事件、伏笔、知识边界和后续章节。\n\
          5. `## CANDIDATE_MEMORY_UPDATES`：建议写入记忆图的候选项。\n\n\
-         `## CANDIDATE_MEMORY_UPDATES` 中每条候选更新单独一行，优先输出 JSON 对象，供 DeepSeek Novel Studio 写入 `memory/candidates/{chapter:03}.json` 等待确认：\n\
+         `## CANDIDATE_MEMORY_UPDATES` 中每条候选更新单独一行，优先输出 JSON 对象，供 Writer 写入 `memory/candidates/{chapter:03}.json` 等待确认：\n\
          {{\"chapter\":{chapter},\"kind\":\"knowledge|relationship|promise|event|location_state|object_state|memory\",\"target\":\"人物/地点/伏笔\",\"change\":\"变化\",\"evidence\":\"简短证据\",\"confidence\":0.80,\"affects\":[\"node_a\",\"node_b\"]}}\n\
          也可使用兼容文本格式：\n\
          - 候选记忆更新：target: 人物/地点/伏笔 change: 变化 evidence: 简短证据 confidence 0.80 affects: node_a,node_b\n\
@@ -2216,7 +2222,7 @@ async fn revise_chapter(
          Canon 优先级：已完成章节/已应用 memory > bible/cards > 本章 brief > outline/master_plan。audit 和 craft_plan 只用于定位问题或写法参考，不得直接变成新事实。\n\n\
          文件写入约束：\n\
          - 本次修订只允许更新 `chapters/{chapter:03}/final.md`。\n\
-         - DeepSeek Novel Studio 会在覆盖前保存章节版本备份；不要自行删除 `draft.md`、`audit.md`、`memory/` 或 `.versions/`。\n\
+         - Writer 会在覆盖前保存章节版本备份；不要自行删除 `draft.md`、`audit.md`、`memory/` 或 `.versions/`。\n\
          - 修订完成后必须保留完整章节正文，不要只输出差异或修订说明。\n\n\
          Top 3 定向修订目标：\n\n{revision_targets}\n\n\
          修订保护项（不得洗掉）：\n\n{protected_strengths}\n\n\
@@ -2360,7 +2366,7 @@ fn chapter_memory_summary_prompt(chapter: u32, context: &str, chapter_text: &str
          10. `## 人物体验沉淀`：本章人物做出的选择、付出的代价、遮掩的东西、未说出口的情绪，最多 4 条。\n\
          11. `## 写法反馈`：哪些人味正文策略有效，哪些地方仍有 AI 腔/解释过量风险，最多 3 条。\n\
          12. `## 后续风险`：容易遗忘或写崩的连续性点，最多 5 条。\n\n\
-         末尾必须包含 `## CANDIDATE_MEMORY_UPDATES`。每条候选更新单独一行，优先输出 JSON 对象，供 DeepSeek Novel Studio 写入 `memory/candidates/{chapter:03}.json` 等待确认：\n\
+         末尾必须包含 `## CANDIDATE_MEMORY_UPDATES`。每条候选更新单独一行，优先输出 JSON 对象，供 Writer 写入 `memory/candidates/{chapter:03}.json` 等待确认：\n\
          {{\"chapter\":{chapter},\"kind\":\"knowledge|relationship|promise|event|location_state|object_state|memory\",\"target\":\"人物/地点/伏笔\",\"change\":\"变化\",\"evidence\":\"简短证据\",\"confidence\":0.80,\"affects\":[\"node_a\",\"node_b\"]}}\n\
          也可使用兼容文本格式：\n\
          - 候选记忆更新：target: 人物/地点/伏笔 change: 变化 evidence: 简短证据 confidence 0.80 affects: node_a,node_b\n\
@@ -8279,8 +8285,34 @@ fn write_experiment_plan(
             "chapters/{NNN}/audit.md",
             "memory/candidates/{NNN}.json",
             "chapter revision diff",
-            "memory regression report"
+            "memory regression report",
+            "experiments/reports/{snapshot}.json"
         ],
+        "acceptance_baseline": {
+            "path": "experiments/baselines/long_form_acceptance.md",
+            "snapshot_command": "deepseek experiment snapshot --start 1 --end N --run-id <run_id>",
+            "minimum_sample_chapters": [10, 30, 50],
+            "default_words_per_chapter": 3500,
+            "required_gates": [
+                "no context_quality blockers before drafting unless explicitly waived",
+                "every drafted chapter has ChapterQualityReport",
+                "every completed chapter has audit.md and memory summary",
+                "pending memory candidates are reviewed or justified before the next 10-chapter window",
+                "memory regression reports exist for each 10-chapter window"
+            ],
+            "tracked_metrics": [
+                "chapter_success_rate",
+                "average_generation_latency_seconds",
+                "context_chars_per_chapter",
+                "blocker_count_by_code",
+                "major_count_by_code",
+                "pending_candidate_count",
+                "summary_max_chars",
+                "canon_sparse_summary_count",
+                "revision_voice_loss_count",
+                "chapter_bridge_opening_count"
+            ]
+        },
         "collapse_signals": [
             "character_drift",
             "promise_breakage",
@@ -12575,6 +12607,7 @@ mod tests {
             "eval/rubrics/quality_signals.md",
             "eval/failures/resource_without_cost",
             "experiments/README.md",
+            "experiments/baselines/long_form_acceptance.md",
             "experiments/configs",
             "experiments/runs",
             "leaderboard/README.md",
@@ -12608,6 +12641,13 @@ mod tests {
         let experiments_readme = std::fs::read_to_string(tmp.path().join("experiments/README.md"))
             .expect("experiments readme");
         assert!(experiments_readme.contains("after development is complete"));
+        let baseline = std::fs::read_to_string(
+            tmp.path()
+                .join("experiments/baselines/long_form_acceptance.md"),
+        )
+        .expect("long-form baseline");
+        assert!(baseline.contains("50 chapters"));
+        assert!(baseline.contains("3500 target words"));
     }
 
     #[test]
@@ -14712,6 +14752,10 @@ mod tests {
         assert!(raw.contains("\"workflow\": \"targeted_revise\""));
         assert!(raw.contains("deepseek revise 10"));
         assert!(raw.contains("ContextQualityReport"));
+        assert!(raw.contains("\"acceptance_baseline\""));
+        assert!(raw.contains("experiments/baselines/long_form_acceptance.md"));
+        assert!(raw.contains("\"default_words_per_chapter\": 3500"));
+        assert!(raw.contains("chapter_bridge_opening_count"));
         assert!(raw.contains("Plan only"));
         assert!(!tmp.path().join("chapters/010/draft.md").exists());
     }
@@ -16029,7 +16073,7 @@ The ledger is injected before drafting so character continuity is grounded in re
 const MEMORY_GRAPH_JSON_SCHEMA: &str = r##"{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://deepseek.local/novel-studio/memory-graph.schema.json",
-  "title": "DeepSeek Novel Studio Memory Graph",
+  "title": "Writer Memory Graph",
   "type": "object",
   "required": ["schema_version", "updated_at", "nodes", "edges"],
   "properties": {
@@ -16097,7 +16141,7 @@ const MEMORY_GRAPH_JSON_SCHEMA: &str = r##"{
 }
 "##;
 
-const NOVEL_SYSTEM_PROMPT: &str = r#"你是 DeepSeek Novel Studio 的长篇小说创作引擎，专门服务中长篇和超长篇中文小说生产。
+const NOVEL_SYSTEM_PROMPT: &str = r#"你是 Writer 的长篇小说创作引擎，专门服务中长篇和超长篇中文小说生产。
 
 你的工作不是聊天补句，而是维护一本书的长期工程：设定、人物、章节、伏笔、事实锁、连续性、文风和读者期待。
 
@@ -16112,7 +16156,7 @@ const NOVEL_SYSTEM_PROMPT: &str = r#"你是 DeepSeek Novel Studio 的长篇小�
 - 如果资料不足，做保守补全，并让补全与已有设定兼容。
 "#;
 
-const EMPOWER_SYSTEM_PROMPT: &str = r#"你是 DeepSeek Novel Studio 的记忆辅助写作编辑，负责把章节目标转成可选写法札记。
+const EMPOWER_SYSTEM_PROMPT: &str = r#"你是 Writer 的记忆辅助写作编辑，负责把章节目标转成可选写法札记。
 
 你的输出不是审查模板，也不是正文生成流水线。你的职责是帮助作者看见本章会触碰的长期记忆、人物可能性和叙事风险，同时保留正文临场生成的自由。
 
@@ -16123,7 +16167,7 @@ const EMPOWER_SYSTEM_PROMPT: &str = r#"你是 DeepSeek Novel Studio 的记忆辅
 - 尊重既有设定、简报、人物信息边界和读者承诺。
 "#;
 
-const EDITOR_SYSTEM_PROMPT: &str = r#"你是 DeepSeek Novel Studio 的长篇记忆诊断员。
+const EDITOR_SYSTEM_PROMPT: &str = r#"你是 Writer 的长篇记忆诊断员。
 
 你专门维护长篇小说的记忆一致性：人物状态、时间线、设定规则、地点状态、物件归属、伏笔状态、信息边界和章节后果。
 
@@ -16229,8 +16273,66 @@ Capture for each run:
 - model, temperature, skill package, genre, target words, memory configuration, and command chain.
 - per-chapter ContextQualityReport, ChapterQualityReport, audit.md, memory candidates, and revision diff.
 - suspected collapse points: character drift, promise breakage, resource without cost, knowledge leak, revision voice loss, and context growth.
+- baseline gate status from `experiments/baselines/long_form_acceptance.md`.
 
 Do not treat one run as a final capability claim.
+"#;
+
+const LONG_FORM_ACCEPTANCE_BASELINE: &str = r#"# Long-Form Acceptance Baseline
+
+This baseline defines when a Writer long-form run is evidence-bearing. It is not
+a guarantee of reader quality and it is not satisfied by a single short smoke
+test.
+
+## Required Runs
+
+- 10 chapters: smoke plus failure triage.
+- 30 chapters: short-book continuity and cost profile.
+- 50 chapters: late-context noise and memory-pressure profile.
+
+Use 3500 target words per chapter unless the experiment plan records another
+target.
+
+## Required Artifacts
+
+Every measured run must keep:
+
+- `experiments/configs/<run_id>.json`
+- `experiments/reports/<snapshot>.json`
+- `memory/reports/` regression reports for every 10-chapter window
+- per-chapter `ContextQualityReport` and `ChapterQualityReport`
+- per-chapter `audit.md`
+- per-chapter `memory/summaries/NNN.md`
+- reviewed or explicitly deferred `memory/candidates/NNN.json`
+
+## Pass Gates
+
+- No context-quality blocker before drafting unless the run explicitly records
+  `--allow-degraded-context` and explains why.
+- Every completed chapter has a summary, audit, and memory candidate decision.
+- 10-chapter regression reports do not show unresolved character knowledge
+  leaks, promise breakage, or timeline contradictions.
+- Recent memory summaries stay below the configured overweight threshold unless
+  the run records a compaction action.
+- Pending candidate pressure is reviewed before the next 10-chapter window.
+- Revision does not erase the accepted scene order, point of view, or working
+  voice without a recorded reason.
+- Chapter opening/ending bridge issues trend down after targeted revision.
+
+## Metrics To Report
+
+- completed chapters / attempted chapters
+- average seconds per chapter stage: brief, write, audit, revise, remember
+- generated words per chapter
+- context chars per chapter and prompt chars per chapter
+- blocker and major signal counts by code
+- pending candidate count and max candidates per chapter
+- summary max chars and canon-sparse summary count
+- memory graph nodes, edges, and schema status
+- chapter bridge opening count
+- revision voice loss count
+
+Only make a capability claim from measured runs that include the artifacts above.
 "#;
 
 const LEADERBOARD_README: &str = r#"# Experiment Leaderboard

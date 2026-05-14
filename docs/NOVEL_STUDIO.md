@@ -1,6 +1,6 @@
-# DeepSeek Novel Studio
+# Writer
 
-DeepSeek Novel Studio is the local-first workflow for planning, drafting,
+Writer is the local-first workflow for planning, drafting,
 diagnosing, revising, remembering, and exporting long-form fiction. The product
 goal is to treat a novel as a durable local project, not as a single chat turn.
 
@@ -212,7 +212,30 @@ itself.
 - `deepseek experiment snapshot ...` captures context reports, quality reports,
   audits, memory candidates, and run metadata.
 
-True long-run validation remains a separate phase after feature development.
+Every initialized book now includes
+`experiments/baselines/long_form_acceptance.md`. Treat that file as the minimum
+evidence contract for capability claims.
+
+Recommended staged validation:
+
+```bash
+deepseek experiment plan --name baseline-10 --chapters 10 --workflow memory --model deepseek-v4-flash
+# run the chapter chain recorded in experiments/configs/<run_id>.json
+deepseek experiment snapshot --start 1 --end 10 --run-id <run_id>
+
+deepseek experiment plan --name baseline-30 --chapters 30 --workflow targeted_revise --model deepseek-v4-flash
+deepseek experiment snapshot --start 1 --end 30 --run-id <run_id>
+
+deepseek experiment plan --name baseline-50 --chapters 50 --workflow targeted_revise_archive --model deepseek-v4-flash
+deepseek experiment snapshot --start 1 --end 50 --run-id <run_id>
+```
+
+The 10-chapter run is a smoke plus failure-triage pass. The 30-chapter run is
+the first meaningful continuity and cost profile. The 50-chapter run is the
+first late-context noise and memory-pressure profile. Do not make a chapter-count
+or million-word capability claim without the config, snapshots, regression
+reports, summaries, candidate decisions, and gate status required by the
+baseline file.
 
 ## Verification Status
 

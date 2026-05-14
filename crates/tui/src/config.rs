@@ -1,4 +1,4 @@
-//! Configuration loading and defaults for DeepSeek TUI.
+//! Configuration loading and defaults for Writer.
 
 use std::collections::HashMap;
 use std::fmt::Write;
@@ -1959,7 +1959,7 @@ pub fn ensure_config_file_exists(path: Option<PathBuf>) -> Result<Option<PathBuf
 
     ensure_parent_dir(&config_path)?;
     let content = format!(
-        r#"# DeepSeek TUI Configuration
+        r#"# Writer Configuration
 # Get your API key from https://platform.deepseek.com
 # Save it with: deepseek auth set --provider deepseek
 
@@ -3082,7 +3082,7 @@ fn save_api_key_to_config_file(api_key: &str) -> Result<PathBuf> {
     } else {
         // Create new minimal config
         format!(
-            r#"# DeepSeek TUI Configuration
+            r#"# Writer Configuration
 # Get your API key from https://platform.deepseek.com
 # Or set DEEPSEEK_API_KEY environment variable
 

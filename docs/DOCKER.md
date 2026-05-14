@@ -1,32 +1,33 @@
 # Docker
 
-DeepSeek-TUI publishes a multi-arch Linux image to GitHub Container Registry
-for each release.
-
-```bash
-docker pull ghcr.io/hmbown/deepseek-tui:latest
-```
+Writer's release workflow is configured to publish a multi-arch Linux image to
+GitHub Container Registry for each release. This requires a published Writer
+release tag; before that, build the image locally.
 
 ## Quick start
 
-Run the published image with a Docker-managed data volume:
+Until the first Writer GHCR image is published, build locally and run it with a
+Docker-managed data volume:
 
 ```bash
 docker volume create deepseek-tui-home
 
+docker build -t writer .
+
 docker run --rm -it \
   -e DEEPSEEK_API_KEY="$DEEPSEEK_API_KEY" \
   -v deepseek-tui-home:/home/deepseek/.deepseek \
-  ghcr.io/hmbown/deepseek-tui:latest
+  writer
 ```
 
-Use a pinned release tag for reproducible installs:
+After the first Writer GHCR release, prefer a pinned release tag for
+reproducible installs:
 
 ```bash
 docker run --rm -it \
   -e DEEPSEEK_API_KEY="$DEEPSEEK_API_KEY" \
   -v deepseek-tui-home:/home/deepseek/.deepseek \
-  ghcr.io/hmbown/deepseek-tui:v0.8.20
+  ghcr.io/luo-cccc/writer:vX.Y.Z
 ```
 
 ## Local build
@@ -46,7 +47,7 @@ docker run --rm -it \
   deepseek-tui
 ```
 
-Docker Hub publishing is not configured; GHCR is the supported prebuilt image
+Docker Hub publishing is not configured; GHCR is the intended prebuilt image
 registry.
 
 ## Environment variables
@@ -83,7 +84,7 @@ sudo chown -R 1000:1000 ~/.deepseek
 docker run --rm -it \
   -e DEEPSEEK_API_KEY="$DEEPSEEK_API_KEY" \
   -v ~/.deepseek:/home/deepseek/.deepseek \
-  ghcr.io/hmbown/deepseek-tui:latest
+  writer
 ```
 
 That `chown` changes ownership of the host `~/.deepseek` directory. Skip it if
@@ -97,7 +98,7 @@ When stdin is not a TTY, `deepseek` drops to the dispatcher's one-shot mode
 
 ```bash
 echo "Explain the Cargo.toml in structured English." | \
-  docker run --rm -i -e DEEPSEEK_API_KEY ghcr.io/hmbown/deepseek-tui:latest
+  docker run --rm -i -e DEEPSEEK_API_KEY writer
 ```
 
 ## Building locally
@@ -120,5 +121,6 @@ ready-to-use development environment.
 
 ## Release status
 
-Docker image publishing is part of the release gate. The image is published to
-GHCR for `linux/amd64` and `linux/arm64` with semver tags plus `latest`.
+Docker image publishing is part of the release gate after Writer release tags
+exist. The image is published to GHCR for `linux/amd64` and `linux/arm64` with
+semver tags plus `latest`.

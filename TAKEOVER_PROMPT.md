@@ -1,6 +1,6 @@
 # v0.8.6 Takeover Prompt — Fresh DeepSeek V4 Session
 
-You are taking over the v0.8.6 sprint for `github.com/Hmbown/DeepSeek-TUI`.
+You are taking over the v0.8.6 sprint for `github.com/luo-cccc/Writer`.
 A previous DeepSeek session kept getting interrupted because the parent session
 grew too large during long-running work. The user has now pruned local saved
 sessions, but that is only temporary relief. Your job is to stabilize the branch
@@ -24,7 +24,7 @@ Start with #402:
 This is now the top priority because it caused the interrupted handoff loop.
 The issue body names the exact gap versus `/Volumes/VIXinSSD/codex-main`:
 
-- DeepSeek TUI keeps unbounded `api_messages` and visible `history`.
+- Writer keeps unbounded `api_messages` and visible `history`.
 - `auto_compact = false` and the capacity controller is off by default.
 - saved sessions serialize full `messages: Vec<Message>` snapshots.
 - the important mocked engine tests for compaction/subagents/parallel execution

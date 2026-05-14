@@ -1,6 +1,7 @@
 # Security Policy
 
-DeepSeek TUI is a coding agent with direct access to file operations, shell execution, and the network. Security disclosures are taken seriously.
+Writer can read local project files, write drafts, run shell commands through
+its tool layer, and call the network. Security disclosures are taken seriously.
 
 ## Supported Versions
 
@@ -11,16 +12,18 @@ Only the latest stable release receives security patches. No backports to older 
 | latest stable | :white_check_mark: |
 | < latest | :x: |
 
-Check the [releases page](https://github.com/Hmbown/DeepSeek-TUI/releases) for the current version.
+Check the [releases page](https://github.com/luo-cccc/Writer/releases) for the current version.
 
 ## Reporting a Vulnerability
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Report privately via one of:
+Report privately via:
 
-- **GitHub private advisory**: [github.com/Hmbown/DeepSeek-TUI/security/advisories/new](https://github.com/Hmbown/DeepSeek-TUI/security/advisories/new)
-- **Email**: [security@deepseek-tui.com](mailto:security@deepseek-tui.com) — include `[SECURITY]` in the subject line
+- **GitHub private advisory**: [github.com/luo-cccc/Writer/security/advisories/new](https://github.com/luo-cccc/Writer/security/advisories/new)
+
+No public security email is configured yet. Do not send vulnerability details
+to personal addresses or open public issues for private reports.
 
 Include in your report:
 
@@ -58,7 +61,7 @@ You will receive status updates at each phase. If the timeline slips, we will co
 - Denial of service / rate-limit exhaustion against the DeepSeek API
 - Vulnerabilities in third-party dependencies (report to the upstream project)
 - Attacks requiring physical access to the victim's machine
-- Theoretical ML-model injection attacks not demonstrated in the DeepSeek TUI context
+- Theoretical ML-model injection attacks not demonstrated in the Writer context
 
 If you are unsure whether a bug is in scope, report it anyway. We will triage and respond.
 

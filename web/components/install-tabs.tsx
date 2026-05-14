@@ -57,20 +57,20 @@ deepseek-tui      # raw TUI binary`,
     prereq: "Apple Silicon (arm64) or Intel (x64). Releases ship raw binaries — no archive to extract.",
     cmd: `# Apple Silicon
 curl -fsSL -o deepseek \\
-  https://github.com/Hmbown/deepseek-tui/releases/latest/download/deepseek-macos-arm64
+  https://github.com/luo-cccc/Writer/releases/latest/download/deepseek-macos-arm64
 chmod +x deepseek
 xattr -d com.apple.quarantine deepseek 2>/dev/null || true
 sudo mv deepseek /usr/local/bin/
 
 # Intel
 curl -fsSL -o deepseek \\
-  https://github.com/Hmbown/deepseek-tui/releases/latest/download/deepseek-macos-x64
+  https://github.com/luo-cccc/Writer/releases/latest/download/deepseek-macos-x64
 chmod +x deepseek
 xattr -d com.apple.quarantine deepseek 2>/dev/null || true
 sudo mv deepseek /usr/local/bin/
 
 # Verify checksum (optional but recommended)
-curl -fsSL -O https://github.com/Hmbown/deepseek-tui/releases/latest/download/deepseek-artifacts-sha256.txt
+curl -fsSL -O https://github.com/luo-cccc/Writer/releases/latest/download/deepseek-artifacts-sha256.txt
 shasum -a 256 -c deepseek-artifacts-sha256.txt --ignore-missing
 
 deepseek`,
@@ -80,12 +80,12 @@ deepseek`,
     os: "macos",
     label: "Homebrew",
     cn: "Homebrew",
-    prereq: "Homebrew on macOS or Linux; installs the dispatcher and companion TUI from the official Hmbown tap.",
-    cmd: `brew tap Hmbown/deepseek-tui
-brew install deepseek-tui
-
-deepseek --version
-deepseek`,
+    comingSoon: true,
+    prereq: "No luo-cccc Homebrew tap is published yet — use Cargo, npm, or source install.",
+    cmd: `# Coming soon.
+# Current working alternatives:
+#   cargo install deepseek-tui-cli --locked
+#   npm install -g deepseek-tui`,
   },
 
   // ─── Linux ────────────────────────────────────────────────
@@ -117,18 +117,18 @@ deepseek`,
     prereq: "x86_64 or aarch64 glibc. Releases ship raw binaries — no archive to extract.",
     cmd: `# x86_64
 curl -fsSL -o deepseek \\
-  https://github.com/Hmbown/deepseek-tui/releases/latest/download/deepseek-linux-x64
+  https://github.com/luo-cccc/Writer/releases/latest/download/deepseek-linux-x64
 chmod +x deepseek
 sudo mv deepseek /usr/local/bin/
 
 # arm64
 curl -fsSL -o deepseek \\
-  https://github.com/Hmbown/deepseek-tui/releases/latest/download/deepseek-linux-arm64
+  https://github.com/luo-cccc/Writer/releases/latest/download/deepseek-linux-arm64
 chmod +x deepseek
 sudo mv deepseek /usr/local/bin/
 
 # Verify checksum (optional but recommended)
-curl -fsSL -O https://github.com/Hmbown/deepseek-tui/releases/latest/download/deepseek-artifacts-sha256.txt
+curl -fsSL -O https://github.com/luo-cccc/Writer/releases/latest/download/deepseek-artifacts-sha256.txt
 sha256sum -c deepseek-artifacts-sha256.txt --ignore-missing
 
 deepseek`,
@@ -167,7 +167,7 @@ $dest = "$Env:USERPROFILE\\bin"
 New-Item -ItemType Directory -Force $dest | Out-Null
 
 Invoke-WebRequest \`
-  -Uri https://github.com/Hmbown/deepseek-tui/releases/latest/download/deepseek-windows-x64.exe \`
+  -Uri https://github.com/luo-cccc/Writer/releases/latest/download/deepseek-windows-x64.exe \`
   -OutFile "$dest\\deepseek.exe"
 
 # Add to PATH for this session (persist via System Properties → Environment Variables)
@@ -189,7 +189,7 @@ deepseek`,
 #   - Pre-built deepseek-windows-x64.exe (above)
 #
 # Track progress:
-#   https://github.com/Hmbown/deepseek-tui/issues`,
+#   https://github.com/luo-cccc/Writer/issues`,
   },
 
   // ─── Any (cross-platform) ────────────────────────────────
@@ -198,22 +198,22 @@ deepseek`,
     os: "any",
     label: "Docker",
     cn: "Docker",
-    prereq: "Dockerfile ships with the repo (multi-arch buildx). No prebuilt image is published to a registry yet.",
-    cmd: `git clone https://github.com/Hmbown/deepseek-tui
-cd deepseek-tui
+    prereq: "Dockerfile ships with the repo. Build locally until the first Writer GHCR image is released.",
+    cmd: `git clone https://github.com/luo-cccc/Writer
+cd Writer
 
 # Build for your local arch
-docker build -t deepseek-tui .
+docker build -t writer .
 
 # Or multi-arch via buildx
-docker buildx build --platform linux/amd64,linux/arm64 -t deepseek-tui .
+docker buildx build --platform linux/amd64,linux/arm64 -t writer .
 
 # Run interactively, mounting your config + a project
 docker run --rm -it \\
   -e DEEPSEEK_API_KEY=$DEEPSEEK_API_KEY \\
   -v ~/.deepseek:/home/deepseek/.deepseek \\
   -v "$PWD:/work" -w /work \\
-  deepseek-tui`,
+  writer`,
   },
   {
     id: "from-source",
@@ -221,8 +221,8 @@ docker run --rm -it \\
     label: "Build from source",
     cn: "源码编译",
     prereq: "Rust 1.88+ and a git checkout — useful for hacking on the workspace itself.",
-    cmd: `git clone https://github.com/Hmbown/deepseek-tui
-cd deepseek-tui
+    cmd: `git clone https://github.com/luo-cccc/Writer
+cd Writer
 
 # Builds both \`deepseek\` and \`deepseek-tui\` into ./target/release/
 cargo build --release --locked

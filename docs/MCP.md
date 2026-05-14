@@ -1,6 +1,6 @@
 # MCP (External Tool Servers)
 
-DeepSeek TUI can load additional tools via MCP (Model Context Protocol). MCP servers are local processes that the TUI starts and communicates with over stdio.
+Writer can load additional tools via MCP (Model Context Protocol). MCP servers are local processes that the TUI starts and communicates with over stdio.
 
 Browsing note:
 - `web.run` is the canonical built-in browsing tool.

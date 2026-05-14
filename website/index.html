@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DeepSeek TUI — Terminal-native coding agent</title>
+  <title>Writer — Long-form fiction workspace</title>
   <link rel="alternate" hreflang="zh" href="./zh/">
   <style>
     :root {
@@ -427,12 +427,12 @@
 
 <nav>
   <div class="container">
-    <div class="nav-brand">deepseek<span>-tui</span></div>
+    <div class="nav-brand">Writer</div>
     <ul class="nav-links">
       <li><a href="#install">Install</a></li>
-      <li><a href="https://github.com/Hmbown/DeepSeek-TUI" target="_blank" rel="noopener">GitHub</a></li>
-      <li><a href="https://github.com/Hmbown/DeepSeek-TUI/tree/main/docs" target="_blank" rel="noopener">Docs</a></li>
-      <li><a href="https://github.com/Hmbown/DeepSeek-TUI/issues" target="_blank" rel="noopener">Community</a></li>
+      <li><a href="https://github.com/luo-cccc/Writer" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="https://github.com/luo-cccc/Writer/tree/main/docs" target="_blank" rel="noopener">Docs</a></li>
+      <li><a href="https://github.com/luo-cccc/Writer/issues" target="_blank" rel="noopener">Community</a></li>
       <li><a href="./zh/" class="lang-switch" title="切换到简体中文">中</a></li>
     </ul>
   </div>
@@ -441,9 +441,9 @@
 <main class="container">
 
   <div class="hero" id="install">
-    <div class="hero-badge"><span class="dot"></span>v0.8.10 available now</div>
-    <h1>A terminal-native coding agent<br>for <span class="accent">DeepSeek&nbsp;V4</span></h1>
-    <p class="lead">1M-token context. Thinking-mode streaming. Single binary, zero dependencies — ships an MCP client, sandbox, and durable task queue out of the box.</p>
+    <div class="hero-badge"><span class="dot"></span>Draft site for the Writer repo</div>
+    <h1>A long-form fiction workspace<br>for <span class="accent">DeepSeek&nbsp;V4</span></h1>
+    <p class="lead">Plan chapters, write scenes, keep project memory searchable, and run reproducible long-form acceptance checks from the terminal.</p>
 
     <div class="terminal">
       <div class="terminal-header">
@@ -454,48 +454,48 @@
       </div>
       <div class="terminal-body">
         <span class="prompt">$</span>
-        <span>npm i -g deepseek-tui</span>
+        <span>git clone https://github.com/luo-cccc/Writer.git</span>
         <span class="cursor"></span>
         <button class="btn-copy" onclick="copyInstall()" id="copyBtn">Copy</button>
       </div>
     </div>
 
     <div class="hero-actions">
-      <a class="btn btn-primary" href="https://github.com/Hmbown/DeepSeek-TUI" target="_blank" rel="noopener">View on GitHub</a>
-      <a class="btn btn-secondary" href="https://www.buymeacoffee.com/hmbown" target="_blank" rel="noopener">Support</a>
+      <a class="btn btn-primary" href="https://github.com/luo-cccc/Writer" target="_blank" rel="noopener">View on GitHub</a>
+      <a class="btn btn-secondary" href="https://github.com/luo-cccc/Writer/tree/main/docs" target="_blank" rel="noopener">Read Docs</a>
     </div>
   </div>
 
   <div class="screenshot-wrap">
-    <img src="https://raw.githubusercontent.com/Hmbown/DeepSeek-TUI/main/assets/screenshot.png" alt="DeepSeek TUI screenshot" loading="lazy">
+    <img src="https://raw.githubusercontent.com/luo-cccc/Writer/main/assets/screenshot.png" alt="Writer screenshot" loading="lazy">
   </div>
 
   <section>
     <h2><span class="icon">▸</span>What you get</h2>
     <div class="feature-grid">
       <div class="feature-card">
-        <h3>1M context</h3>
-        <p>Built for DeepSeek V4 with intelligent compaction and prefix-cache-aware cost optimization.</p>
+        <h3>Long context</h3>
+        <p>Built around DeepSeek V4 context capacity with compaction paths for longer writing projects.</p>
       </div>
       <div class="feature-card">
-        <h3>Thinking stream</h3>
-        <p>Watch the model's chain-of-thought unfold in real time before the final answer arrives.</p>
+        <h3>Chapter workflow</h3>
+        <p>Initialize project plans, draft chapters, and track acceptance gates for multi-chapter runs.</p>
       </div>
       <div class="feature-card">
-        <h3>Native RLM</h3>
-        <p>Fan out 1–16 cheap children in parallel for batched analysis and parallel reasoning.</p>
+        <h3>Memory-aware retrieval</h3>
+        <p>Use summaries, candidate cleanup, and project memory to reduce stale context and retrieval noise.</p>
       </div>
       <div class="feature-card">
         <h3>Full tool suite</h3>
-        <p>File ops, shell, git, web search, apply-patch, sub-agents, and MCP servers.</p>
+        <p>File ops, shell, git, search, apply-patch, sub-agents, and MCP servers remain available.</p>
       </div>
       <div class="feature-card">
-        <h3>Three modes</h3>
-        <p>Plan (read-only), Agent (interactive), and YOLO (auto-approved) for any workflow.</p>
+        <h3>Controlled modes</h3>
+        <p>Plan, Agent, and auto-approved flows support review-heavy writing and implementation work.</p>
       </div>
       <div class="feature-card">
         <h3>Durable sessions</h3>
-        <p>Save, resume, and rollback workspace state without touching your repo's .git.</p>
+        <p>Persist sessions, config, skills, memory, and queued work across long writing runs.</p>
       </div>
     </div>
   </section>
@@ -505,12 +505,12 @@
     <p>If downloads from GitHub or npm are slow from mainland China, use one of these paths:</p>
 
     <details open>
-      <summary>npm via 淘宝镜像 (fastest)</summary>
-      <pre><code>npm config set registry https://registry.npmmirror.com
-npm install -g deepseek-tui</code></pre>
-      <p style="font-size:0.85rem;margin-bottom:0;">The npm wrapper itself will still download the binary from GitHub Releases during <code>postinstall</code>. If that step is slow, set a mirror for the binary download:</p>
-      <pre style="margin-top:0.5rem;margin-bottom:0;"><code>DEEPSEEK_TUI_RELEASE_BASE_URL=https://your-mirror.example.com \
-  npm install -g deepseek-tui</code></pre>
+      <summary>Source checkout</summary>
+      <pre><code>git clone https://github.com/luo-cccc/Writer.git
+cd Writer
+cargo build --release
+./target/release/deepseek --version</code></pre>
+      <p style="font-size:0.85rem;margin-bottom:0;">Use source builds until the first Writer release publishes prebuilt assets.</p>
     </details>
 
     <details>
@@ -521,9 +521,9 @@ replace-with = "tuna"
 
 [source.tuna]
 registry = "sparse+https://mirrors.tuna.tsinghua.edu.cn/crates.io-index/"</code></pre>
-      <p>Then install both binaries:</p>
-      <pre><code>cargo install deepseek-tui-cli --locked   # provides `deepseek`
-cargo install deepseek-tui     --locked   # provides `deepseek-tui`
+      <p>Then build or install both binaries from the checkout:</p>
+      <pre><code>cargo install --path crates/cli --locked
+cargo install --path crates/tui --locked
 deepseek --version</code></pre>
     </details>
 
@@ -534,7 +534,7 @@ export RUSTUP_UPDATE_ROOT=https://mirrors.tuna.tsinghua.edu.cn/rustup/rustup
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh</code></pre>
     </details>
 
-    <p style="margin-top:1rem;font-size:0.875rem;">Full platform guide: <a href="https://github.com/Hmbown/DeepSeek-TUI/blob/main/docs/INSTALL.md" target="_blank" rel="noopener">docs/INSTALL.md</a> · <a href="../README.zh-CN.md">简体中文 README</a></p>
+    <p style="margin-top:1rem;font-size:0.875rem;">Full platform guide: <a href="https://github.com/luo-cccc/Writer/blob/main/docs/INSTALL.md" target="_blank" rel="noopener">docs/INSTALL.md</a> · <a href="../README.zh-CN.md">简体中文 README</a></p>
   </section>
 
 </main>
@@ -542,20 +542,19 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh</code></pre>
 <footer>
   <div class="container">
     <div class="footer-links">
-      <a href="https://github.com/Hmbown/DeepSeek-TUI" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://github.com/Hmbown/DeepSeek-TUI/tree/main/docs" target="_blank" rel="noopener">Docs</a>
-      <a href="https://github.com/Hmbown/DeepSeek-TUI/issues" target="_blank" rel="noopener">Issues</a>
-      <a href="https://www.buymeacoffee.com/hmbown" target="_blank" rel="noopener">Support</a>
-      <a href="mailto:security@deepseek-tui.com">Security</a>
+      <a href="https://github.com/luo-cccc/Writer" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/luo-cccc/Writer/tree/main/docs" target="_blank" rel="noopener">Docs</a>
+      <a href="https://github.com/luo-cccc/Writer/issues" target="_blank" rel="noopener">Issues</a>
+      <a href="https://github.com/luo-cccc/Writer/security/advisories/new" target="_blank" rel="noopener">Security</a>
     </div>
     <p class="disclaimer">Not affiliated with DeepSeek Inc.</p>
-    <p style="margin-top:0.75rem;">&copy; DeepSeek TUI contributors. MIT License.</p>
+    <p style="margin-top:0.75rem;">&copy; Writer contributors. MIT License.</p>
   </div>
 </footer>
 
 <script>
   function copyInstall() {
-    navigator.clipboard.writeText('npm i -g deepseek-tui').then(() => {
+    navigator.clipboard.writeText('git clone https://github.com/luo-cccc/Writer.git').then(() => {
       const btn = document.getElementById('copyBtn');
       btn.textContent = 'Copied';
       btn.classList.add('copied');

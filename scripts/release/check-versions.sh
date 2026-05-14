@@ -53,13 +53,13 @@ if ! cmp -s CHANGELOG.md crates/tui/CHANGELOG.md; then
 fi
 
 # 5) Security contact guard.
-security_email="security@deepseek-tui.com"
-if ! grep -qF "${security_email}" SECURITY.md; then
-  echo "::error::SECURITY.md must list ${security_email} as the security contact." >&2
+security_advisory="github.com/luo-cccc/Writer/security/advisories/new"
+if ! grep -qF "${security_advisory}" SECURITY.md; then
+  echo "::error::SECURITY.md must list the GitHub private advisory URL." >&2
   fail=1
 fi
-if grep -qF "hmbown.dev@gmail.com" SECURITY.md; then
-  echo "::error::SECURITY.md must not use the personal fallback email; use ${security_email}." >&2
+if grep -qF "security@writer.example" SECURITY.md || grep -qF "hmbown.dev@gmail.com" SECURITY.md; then
+  echo "::error::SECURITY.md must not use placeholder or personal security email addresses." >&2
   fail=1
 fi
 

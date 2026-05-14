@@ -57,8 +57,8 @@ impl From<ProviderArg> for ProviderKind {
     name = "deepseek",
     version = env!("DEEPSEEK_BUILD_VERSION"),
     bin_name = "deepseek",
-    about = "DeepSeek Novel Studio for long-form fiction",
-    long_about = "DeepSeek Novel Studio is a terminal-native long-form fiction workspace.\n\nUse `deepseek` for the interactive writing studio, `deepseek init` to create a book project, and top-level commands such as `deepseek plan`, `deepseek write 1`, `deepseek memory context 12`, and `deepseek export` for durable book workflows.",
+    about = "Writer for long-form fiction",
+    long_about = "Writer is a terminal-native long-form fiction workspace.\n\nUse `deepseek` for the interactive writing studio, `deepseek init` to create a book project, and top-level commands such as `deepseek plan`, `deepseek write 1`, `deepseek memory context 12`, and `deepseek export` for durable book workflows.",
     override_usage = "deepseek [OPTIONS] [PROMPT]\n       deepseek [OPTIONS] <COMMAND> [ARGS]"
 )]
 struct Cli {
@@ -117,7 +117,7 @@ struct Cli {
 enum Commands {
     /// Run interactive/non-interactive flows via the TUI binary.
     Run(RunArgs),
-    /// Run DeepSeek Novel Studio diagnostics.
+    /// Run Writer diagnostics.
     Doctor(TuiPassthroughArgs),
     /// List live DeepSeek API models via the Novel Studio runtime.
     Models(TuiPassthroughArgs),
@@ -1715,7 +1715,7 @@ The `deepseek` dispatcher delegates interactive sessions to a sibling \
   • npm:    npm install -g deepseek-tui            (downloads both binaries)\n\
   • cargo:  cargo install deepseek-tui-cli deepseek-tui --locked\n\
   • GitHub Releases: download BOTH `deepseek-<platform>` AND \
-`deepseek-tui-<platform>` from https://github.com/Hmbown/DeepSeek-TUI/releases/latest \
+`deepseek-tui-<platform>` from https://github.com/luo-cccc/Writer/releases/latest \
 and place them in the same directory.\n\
 \n\
 Or set DEEPSEEK_TUI_BIN to the absolute path of an existing `deepseek-tui` binary.",

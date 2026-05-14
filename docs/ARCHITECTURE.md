@@ -1,6 +1,6 @@
-# DeepSeek TUI Architecture
+# Writer Architecture
 
-This document provides an overview of the DeepSeek TUI architecture for developers and contributors.
+This document provides an overview of the Writer architecture for developers and contributors.
 
 Current boundary note (v0.8.6):
 - `crates/tui` is still the live end-user runtime for the TUI, runtime API, task manager, and tool execution loop.

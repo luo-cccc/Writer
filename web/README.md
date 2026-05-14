@@ -1,8 +1,15 @@
-# deepseek-tui-web
+# Writer Web
 
-Community site for [deepseek-tui](https://github.com/Hmbown/deepseek-tui) — lives at **deepseek-tui.com**.
+Draft community site for [Writer](https://github.com/luo-cccc/Writer).
 
-Next.js 15 (App Router) + Tailwind, deployed to Cloudflare Workers via [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare). Curated "Today's Dispatch" content is regenerated every 6 hours by a Cloudflare Cron Trigger that calls `deepseek-v4-flash` to summarise recent repo activity, and stored in Workers KV.
+This site is not part of the current release path. It is kept in the repository
+for later cleanup and should not be deployed until the copy, domain, Cloudflare
+bindings, and public product positioning are reviewed.
+
+Next.js 15 (App Router) + Tailwind, deployable to Cloudflare Workers via
+[`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare). Curated feed
+content can call `deepseek-v4-flash` to summarize repository activity and store
+the result in Workers KV.
 
 ## Local dev
 
@@ -19,14 +26,15 @@ Required env (only for the curator + private-repo rate limits):
 | ------------------- | ------------------------------------------------- | -------------------- |
 | `DEEPSEEK_API_KEY`  | DeepSeek platform key (`sk-...`)                  | only for `/api/cron?task=curate` |
 | `GITHUB_TOKEN`      | Fine-grained PAT, public-repo read scope          | optional (raises rate limit) |
-| `GITHUB_REPO`       | Defaults to `Hmbown/deepseek-tui`                 | optional             |
+| `GITHUB_REPO`       | Defaults to `luo-cccc/Writer`                    | optional             |
 | `CRON_SECRET`       | Shared secret for manual cron invocation          | optional             |
 
 The site renders fine without any of them — `Today's Dispatch` falls back to a static editorial; the GitHub feed shows "feed not yet loaded".
 
 ## Deploy to Cloudflare
 
-You already own `deepseek-tui.com` on Cloudflare and have a Workers Paid plan. The deploy is two steps:
+Do not deploy this site as-is. When the web product is ready, choose the real
+domain, replace placeholder KV ids, set secrets, and then use this deploy flow:
 
 1. **Provision KV namespaces once:**
 
@@ -48,12 +56,14 @@ You already own `deepseek-tui.com` on Cloudflare and have a Workers Paid plan. T
    npm run deploy                           # builds with OpenNext + uploads
    ```
 
-3. **Point the domain:** in the Cloudflare dashboard, add a Worker route for `deepseek-tui.com/*` → `deepseek-tui-web` (the deploy command will offer this if the zone is already on your account).
+3. **Point the domain:** in the Cloudflare dashboard, add a Worker route for the
+   chosen domain to the Writer Worker (the deploy command will offer this if the
+   zone is already on your account).
 
 The first cron run happens within 6 hours; you can also kick it manually:
 
 ```bash
-curl -H "x-cron-secret: $CRON_SECRET" "https://deepseek-tui.com/api/cron?task=curate"
+curl -H "x-cron-secret: $CRON_SECRET" "https://<writer-domain>/api/cron?task=curate"
 ```
 
 ## What's where

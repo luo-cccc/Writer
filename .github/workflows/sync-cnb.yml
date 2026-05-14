@@ -1,13 +1,10 @@
 name: Sync to CNB
 
-# Mirror commits and release tags to cnb.cool/deepseek-tui.com/DeepSeek-TUI
-# so users behind GitHub-blocking networks can fetch the source and tagged
-# releases from the Tencent-hosted mirror.
+# Optional mirror workflow. It is dispatch-only until a real CNB repository and
+# CNB_GIT_TOKEN secret are configured for luo-cccc/Writer.
 #
-# Triggers:
-#   * push to main      → mirrors that commit to CNB main
-#   * tag matching v*   → mirrors that tag to CNB
-#   * workflow_dispatch → manual fallback if either of the above fails
+# Trigger:
+#   * workflow_dispatch → mirrors the selected ref to the configured CNB repo
 #
 # Why the rewrite (v0.8.31):
 #   The previous implementation used the opaque tencentcom/git-sync Docker
@@ -21,10 +18,12 @@ name: Sync to CNB
 #   half of recent runs failed for those two reasons combined.
 
 on:
-  push:
-    branches: [main]
-    tags: ['v*']
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      cnb_repo:
+        description: 'CNB repository path, for example org-name/Writer'
+        required: true
+        type: string
 
 # Serialize runs so the back-to-back main-push + tag-push from auto-tag.yml
 # don't race each other rebasing onto CNB. cancel-in-progress: false so
@@ -60,7 +59,7 @@ jobs:
           # special characters. CNB tokens are typically alphanumeric so
           # this is belt-and-suspenders.
           ENCODED_TOKEN="$(printf '%s' "${CNB_TOKEN}" | python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.stdin.read(), safe=""))')"
-          REMOTE_URL="https://cnb:${ENCODED_TOKEN}@cnb.cool/deepseek-tui.com/DeepSeek-TUI.git"
+          REMOTE_URL="https://cnb:${ENCODED_TOKEN}@cnb.cool/${{ inputs.cnb_repo }}.git"
           # Use a masked alias so the token never appears in log lines.
           git remote add cnb "${REMOTE_URL}"
 

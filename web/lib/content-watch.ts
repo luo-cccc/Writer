@@ -28,6 +28,7 @@ interface WatchEnv {
   DEEPSEEK_BASE_URL?: string;
   DEEPSEEK_MODEL?: string;
   GITHUB_TOKEN?: string;
+  SITE_URL?: string;
 }
 
 function dsEnv(env: WatchEnv): DeepSeekEnv {
@@ -42,18 +43,16 @@ function dsEnv(env: WatchEnv): DeepSeekEnv {
 // Targets to probe daily. For registries that block bot HEAD/GET (npm, crates.io)
 // we hit the public JSON API instead — same upstream, doesn't 403.
 const LINK_TARGETS: { url: string; label: string }[] = [
-  { url: "https://github.com/Hmbown/deepseek-tui", label: "Main repo" },
-  { url: "https://github.com/Hmbown/deepseek-tui/issues", label: "Issues" },
-  { url: "https://github.com/Hmbown/deepseek-tui/pulls", label: "Pull Requests" },
-  { url: "https://github.com/Hmbown/deepseek-tui/discussions", label: "Discussions" },
-  { url: "https://github.com/Hmbown/deepseek-tui/releases", label: "Releases" },
-  { url: "https://github.com/Hmbown/deepseek-tui/blob/main/LICENSE", label: "License file" },
-  { url: "https://github.com/Hmbown/deepseek-tui/blob/main/CODE_OF_CONDUCT.md", label: "Code of Conduct" },
-  { url: "https://github.com/Hmbown/deepseek-tui/blob/main/SECURITY.md", label: "Security policy" },
-  { url: "https://github.com/Hmbown/deepseek-tui/blob/main/CONTRIBUTING.md", label: "Contributing guide" },
-  { url: "https://github.com/Hmbown/deepseek-tui/blob/main/.github/PULL_REQUEST_TEMPLATE.md", label: "PR template" },
-  { url: "https://github.com/Hmbown/homebrew-deepseek-tui", label: "Homebrew tap" },
-  { url: "https://buymeacoffee.com/hmbown", label: "Support link (BMC)" },
+  { url: "https://github.com/luo-cccc/Writer", label: "Main repo" },
+  { url: "https://github.com/luo-cccc/Writer/issues", label: "Issues" },
+  { url: "https://github.com/luo-cccc/Writer/pulls", label: "Pull Requests" },
+  { url: "https://github.com/luo-cccc/Writer/discussions", label: "Discussions" },
+  { url: "https://github.com/luo-cccc/Writer/releases", label: "Releases" },
+  { url: "https://github.com/luo-cccc/Writer/blob/main/LICENSE", label: "License file" },
+  { url: "https://github.com/luo-cccc/Writer/blob/main/CODE_OF_CONDUCT.md", label: "Code of Conduct" },
+  { url: "https://github.com/luo-cccc/Writer/blob/main/SECURITY.md", label: "Security policy" },
+  { url: "https://github.com/luo-cccc/Writer/blob/main/CONTRIBUTING.md", label: "Contributing guide" },
+  { url: "https://github.com/luo-cccc/Writer/blob/main/.github/PULL_REQUEST_TEMPLATE.md", label: "PR template" },
   { url: "https://registry.npmjs.org/deepseek-tui", label: "npm package (registry API)" },
   // crates.io intentionally not in this list — both their HTML and JSON API return 403 to
   // Cloudflare Workers, so the check produces false positives. The crate links on the site
@@ -108,8 +107,8 @@ export async function runLinkCheck(env: WatchEnv): Promise<{ ok: boolean; checke
       id,
       type: "triage", // reuse existing draft type so /admin renders it
       targetUrl: b.url,
-      bodyEn: `**Broken link** (auto-detected by daily watch cron)\n\n- Label: **${b.label}**\n- URL: ${b.url}\n- HTTP status: ${b.status}\n- Latency: ${b.ms}ms\n\nThis URL is referenced in deepseek-tui.com copy. Update the source page or fix the destination.\n\n— drafted by community assistant, pending maintainer review`,
-      bodyZh: `**链接失效**（每日巡检自动发现）\n\n- 名称：**${b.label}**\n- 地址：${b.url}\n- HTTP 状态：${b.status}\n- 延迟：${b.ms}ms\n\n该地址被 deepseek-tui.com 文案引用，请更新源页面或修复目标。\n\n— 由社区助理草拟，待维护者审阅`,
+      bodyEn: `**Broken link** (auto-detected by daily watch cron)\n\n- Label: **${b.label}**\n- URL: ${b.url}\n- HTTP status: ${b.status}\n- Latency: ${b.ms}ms\n\nThis URL is referenced in Writer web copy. Update the source page or fix the destination.\n\n— drafted by community assistant, pending maintainer review`,
+      bodyZh: `**链接失效**（每日巡检自动发现）\n\n- 名称：**${b.label}**\n- 地址：${b.url}\n- HTTP 状态：${b.status}\n- 延迟：${b.ms}ms\n\n该地址被 Writer Web 文案引用，请更新源页面或修复目标。\n\n— 由社区助理草拟，待维护者审阅`,
       generatedAt: new Date().toISOString(),
       posted: false,
     };
@@ -121,7 +120,7 @@ export async function runLinkCheck(env: WatchEnv): Promise<{ ok: boolean; checke
 
 // --- Semantic drift ---
 
-const SEMANTIC_DRIFT_PROMPT = `You are reviewing copy on a community website (deepseek-tui.com) for the open-source deepseek-tui project.
+const SEMANTIC_DRIFT_PROMPT = `You are reviewing copy on a draft community website for the open-source Writer project.
 
 Given:
 1. The CHANGELOG entries below (most recent first)
@@ -219,6 +218,10 @@ export async function runSemanticDrift(env: WatchEnv): Promise<{ ok: boolean; dr
   if (!env.CURATED_KV || !env.DEEPSEEK_API_KEY) {
     return { ok: false, drafted: 0, reason: "missing CURATED_KV or DEEPSEEK_API_KEY" };
   }
+  const siteUrl = env.SITE_URL ?? process.env.SITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
+  if (!siteUrl) {
+    return { ok: false, drafted: 0, reason: "SITE_URL not configured" };
+  }
 
   const ghHeaders: Record<string, string> = {
     Accept: "application/vnd.github+json",
@@ -228,10 +231,10 @@ export async function runSemanticDrift(env: WatchEnv): Promise<{ ok: boolean; dr
 
   // Fetch CHANGELOG (truncated), recent commits, and live homepage HTML.
   const [changelog, commits, homepageHtml, docsHtml] = await Promise.all([
-    fetch("https://raw.githubusercontent.com/Hmbown/deepseek-tui/main/CHANGELOG.md", { headers: ghHeaders }).then((r) => r.ok ? r.text() : "").catch(() => ""),
-    fetch("https://api.github.com/repos/Hmbown/deepseek-tui/commits?per_page=30", { headers: ghHeaders }).then((r) => r.ok ? r.json() as Promise<{ commit: { message: string }; sha: string }[]> : []).catch(() => []),
-    fetch("https://deepseek-tui.com/en", { headers: { "User-Agent": "deepseek-tui-watch" } }).then((r) => r.ok ? r.text() : "").catch(() => ""),
-    fetch("https://deepseek-tui.com/en/docs", { headers: { "User-Agent": "deepseek-tui-watch" } }).then((r) => r.ok ? r.text() : "").catch(() => ""),
+    fetch("https://raw.githubusercontent.com/luo-cccc/Writer/main/CHANGELOG.md", { headers: ghHeaders }).then((r) => r.ok ? r.text() : "").catch(() => ""),
+    fetch("https://api.github.com/repos/luo-cccc/Writer/commits?per_page=30", { headers: ghHeaders }).then((r) => r.ok ? r.json() as Promise<{ commit: { message: string }; sha: string }[]> : []).catch(() => []),
+    fetch(new URL("/en", siteUrl), { headers: { "User-Agent": "deepseek-tui-watch" } }).then((r) => r.ok ? r.text() : "").catch(() => ""),
+    fetch(new URL("/en/docs", siteUrl), { headers: { "User-Agent": "deepseek-tui-watch" } }).then((r) => r.ok ? r.text() : "").catch(() => ""),
   ]);
 
   if (!changelog && (!commits || commits.length === 0)) {
@@ -291,7 +294,7 @@ ${docsText}`;
     const draft: AgentDraft = {
       id,
       type: "triage",
-      targetUrl: `https://deepseek-tui.com/en/${d.page === "homepage" ? "" : d.page}`,
+      targetUrl: new URL(`/en/${d.page === "homepage" ? "" : d.page}`, siteUrl).toString(),
       bodyEn: body,
       bodyZh: body,
       generatedAt: new Date().toISOString(),

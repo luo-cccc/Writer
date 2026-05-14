@@ -1,6 +1,6 @@
 # Modes and Approvals
 
-DeepSeek TUI has two related concepts:
+Writer has two related concepts:
 
 - **TUI mode**: what kind of visible interaction you're in (Plan/Agent/YOLO).
 - **Approval mode**: how aggressively the UI asks before executing tools.

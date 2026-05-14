@@ -10,7 +10,7 @@ labels: enhancement
 
 ## Proposed solution
 
-<!-- What should DeepSeek TUI do differently? Include commands, UI behavior, or config shape if relevant. -->
+<!-- What should Writer do differently? Include commands, UI behavior, or config shape if relevant. -->
 
 ## Use case
 
