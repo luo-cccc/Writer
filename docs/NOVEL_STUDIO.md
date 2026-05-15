@@ -212,6 +212,8 @@ itself.
 
 - `deepseek eval collect-failure ...` archives original failure samples.
 - `deepseek eval collect-non-trigger ...` archives negative controls.
+- `deepseek eval seed` writes built-in positive/negative fixture pairs for the
+  default deterministic signals.
 - `deepseek eval coverage` reports fixture coverage by signal.
 - `deepseek experiment plan ...` creates long-run experiment plans.
 - `deepseek experiment snapshot ...` captures context reports, quality reports,
@@ -282,9 +284,7 @@ that the command chain, API integration, and deterministic gates run.
 
 ## Next Work
 
-1. Expand failure/non-trigger fixtures for `style_ai_opening`,
-   `xianxia_resource_anchor`, `xianxia_dialogue_voice`, combat observation chain,
-   viewpoint leakage, and targeted revision.
+1. Add CLI smoke coverage for `deepseek eval seed` and the experiment scaffold.
 2. Build the dedicated TUI Novel Studio workspace.
 3. Only after the above, run long-form real validation and report capability
    using measured breakdown rates, not optimistic word-count claims.

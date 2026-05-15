@@ -277,6 +277,12 @@ pub enum NovelEvalCommand {
         #[arg(long)]
         note: Option<String>,
     },
+    /// Seed built-in positive and negative fixtures for deterministic quality signals.
+    Seed {
+        /// Overwrite built-in sample source files if they already exist.
+        #[arg(long)]
+        force: bool,
+    },
     /// Report fixture coverage by deterministic signal.
     Coverage,
 }
@@ -304,6 +310,107 @@ impl FailureKind {
         }
     }
 }
+
+struct BuiltInEvalFixture {
+    signal: &'static str,
+    failure_kind: FailureKind,
+    chapter: Option<u32>,
+    failure_file: &'static str,
+    failure_text: &'static str,
+    expected_revision: &'static str,
+    failure_note: &'static str,
+    non_trigger_file: &'static str,
+    non_trigger_text: &'static str,
+    non_trigger_note: &'static str,
+}
+
+const BUILTIN_EVAL_FIXTURES: &[BuiltInEvalFixture] = &[
+    BuiltInEvalFixture {
+        signal: "style_ai_opening",
+        failure_kind: FailureKind::FakeEmotion,
+        chapter: Some(1),
+        failure_file: "style_ai_opening_failure.md",
+        failure_text: "# Built-in failure: style_ai_opening\n\n坊市的废墟还在冒烟，夜色像一张沉重的网笼罩下来，仿佛预示着更大的风暴即将到来。\n\n沈砚站在街口，心中充满复杂情绪。",
+        expected_revision: "开头先给视角人物的动作、压力、阻碍或具体目标，再让环境服务于当前选择。",
+        failure_note: "Static atmosphere leads before viewpoint action.",
+        non_trigger_file: "style_ai_opening_non_trigger.md",
+        non_trigger_text: "# Built-in non-trigger: style_ai_opening\n\n沈砚先把裂开的丹瓶塞进袖口，才抬眼去看坊市废墟里尚未熄灭的烟。\n\n巡夜弟子的灯已经转过街角，他只剩三息决定往哪条巷子退。",
+        non_trigger_note: "Opening environment is attached to viewpoint action and pressure.",
+    },
+    BuiltInEvalFixture {
+        signal: "xianxia_resource_anchor",
+        failure_kind: FailureKind::ResourceWithoutCost,
+        chapter: Some(2),
+        failure_file: "xianxia_resource_anchor_failure.md",
+        failure_text: "# Built-in failure: xianxia_resource_anchor\n\n沈砚在石匣里发现三枚筑基丹，收进袖中便继续赶路。\n\n他知道这些丹药能改命，却没有人追问来处，也没有任何价格、债务或身体代价。",
+        expected_revision: "补出资源的价值锚点、控制方、来源、使用代价或后续债务。",
+        failure_note: "Resource appears without price, source, controller, cost, or obligation.",
+        non_trigger_file: "xianxia_resource_anchor_non_trigger.md",
+        non_trigger_text: "# Built-in non-trigger: xianxia_resource_anchor\n\n沈砚接过三枚筑基丹时没有立刻收下。\n\n丹房长老报出三百灵石一枚的市价，又按下他的腕脉，提醒他若强行连服，经脉裂伤要由自己承担，丹债也记在外门账册上。",
+        non_trigger_note: "Resource value, controller, price, body cost, and debt are visible.",
+    },
+    BuiltInEvalFixture {
+        signal: "xianxia_dialogue_voice",
+        failure_kind: FailureKind::FakeEmotion,
+        chapter: Some(3),
+        failure_file: "xianxia_dialogue_voice_failure.md",
+        failure_text: "# Built-in failure: xianxia_dialogue_voice\n\n\"我不会退。\"\n\n\"我不会退。\"\n\n\"我不会退。\"\n\n三个人站在丹房门前，说完之后局面没有变化，谁的身份、筹码和压力也没有显出来。",
+        expected_revision: "让不同说话人的身份、策略、词汇和压力分开，并让对话改变信息、权力、关系或选择。",
+        failure_note: "Repeated dialogue lines do not reveal voice, tactic, or state change.",
+        non_trigger_file: "xianxia_dialogue_voice_non_trigger.md",
+        non_trigger_text: "# Built-in non-trigger: xianxia_dialogue_voice\n\n\"账册在我手里。\"丹房长老把竹简往袖中一扣。\n\n沈砚低声道：\"那就先记我三十日，逾期你取我一成灵田。\"\n\n守门弟子侧身让开半步：\"长老，他敢押田，至少不是偷丹。\"",
+        non_trigger_note: "Dialogue separates status, vocabulary, leverage, and state change.",
+    },
+    BuiltInEvalFixture {
+        signal: "xianxia_combat_knowledge_loop",
+        failure_kind: FailureKind::CombatPowerSpam,
+        chapter: Some(4),
+        failure_file: "xianxia_combat_knowledge_loop_failure.md",
+        failure_text: "# Built-in failure: xianxia_combat_knowledge_loop\n\n剑光暴涨，灵压轰鸣，沈砚爆发全部修为，一剑更比一剑强。\n\n对手也爆发修为，双方灵气不断攀升，最后沈砚凭更强的力量压了过去。",
+        expected_revision: "补出观察、判断、误判、针对性选择和反转，让战斗靠信息变化推进而不是只叠战力。",
+        failure_note: "Combat escalates power without observation-to-decision-to-reversal chain.",
+        non_trigger_file: "xianxia_combat_knowledge_loop_non_trigger.md",
+        non_trigger_text: "# Built-in non-trigger: xianxia_combat_knowledge_loop\n\n沈砚第三次听见剑尖擦过石面的轻响，才确认对方左脚每次换步都会慢半息。\n\n他没有硬接剑势，反而故意露出丹瓶，引得对方护住袖口，再用符线缠住那只迟滞的左脚。",
+        non_trigger_note: "Combat turns on observation, decision, bait, and reversal.",
+    },
+    BuiltInEvalFixture {
+        signal: "viewpoint_inner_state_boundary",
+        failure_kind: FailureKind::KnowledgeLeak,
+        chapter: Some(5),
+        failure_file: "viewpoint_inner_state_boundary_failure.md",
+        failure_text: "# Built-in failure: viewpoint_inner_state_boundary\n\n沈砚背对着丹房长老，听见门闩落下。\n\n长老心里其实已经后悔，却仍然装出冷硬模样，暗暗害怕沈砚将来清算这笔债。",
+        expected_revision: "删去非视角人物未经观察或推断的内心，只保留视角能看见、听见或合理推断的证据。",
+        failure_note: "Narration states another character's private inner state without evidence.",
+        non_trigger_file: "viewpoint_inner_state_boundary_non_trigger.md",
+        non_trigger_text: "# Built-in non-trigger: viewpoint_inner_state_boundary\n\n沈砚背对着丹房长老，听见门闩落下。\n\n身后的人迟迟没有离开，指节在账册硬边上敲了两下，声音比方才轻，像是那句狠话说出口后也压住了余劲。",
+        non_trigger_note: "Non-viewpoint state is shown through observable behavior and inference.",
+    },
+    BuiltInEvalFixture {
+        signal: "revision_voice_loss",
+        failure_kind: FailureKind::ReviseOverwriteVoice,
+        chapter: Some(6),
+        failure_file: "revision_voice_loss_failure.md",
+        failure_text: "# Built-in failure: revision_voice_loss\n\n修订前的段落有明确视角、物件和场景顺序：沈砚先藏丹瓶，再骗过守门弟子，最后押上灵田。\n\n修订后只剩总结：沈砚经历了一场重要考验，他的选择体现出成长，也让未来充满不确定性。",
+        expected_revision: "定向修掉最高优先级问题，同时保留原段落的视角贴近、物件线索、场景顺序和人物声音。",
+        failure_note: "Revision fixes abstractly by overwriting scene voice and order.",
+        non_trigger_file: "revision_voice_loss_non_trigger.md",
+        non_trigger_text: "# Built-in non-trigger: revision_voice_loss\n\n修订前：沈砚把丹瓶藏进袖口，绕开守门弟子的灯，最后用三十日灵田收益押账。\n\n修订后：沈砚把裂开的丹瓶先压进袖口，等守门弟子的灯偏向廊柱，才低声报出三十日灵田收益，换丹房长老在账册上暂缓一笔。",
+        non_trigger_note: "Targeted revision preserves viewpoint, object continuity, and scene order.",
+    },
+];
+
+const DEFAULT_EVAL_SIGNALS: &[&str] = &[
+    "style_ai_opening",
+    "viewpoint_inner_state_boundary",
+    "xianxia_resource_anchor",
+    "xianxia_resource_obligation",
+    "xianxia_combat_knowledge_loop",
+    "xianxia_dialogue_voice",
+    "xianxia_worldbuilding_action",
+    "xianxia_emotion_texture",
+    "anchor_carry",
+    "revision_voice_loss",
+];
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum NovelExperimentCommand {
@@ -8690,6 +8797,10 @@ fn novel_eval_command(workspace: &Path, command: NovelEvalCommand) -> Result<()>
             println!("{report}");
             Ok(())
         }
+        NovelEvalCommand::Seed { force } => {
+            println!("{}", seed_eval_fixtures(&root, force)?);
+            Ok(())
+        }
         NovelEvalCommand::Coverage => {
             println!("{}", eval_fixture_coverage_report(&root)?);
             Ok(())
@@ -8848,6 +8959,110 @@ fn collect_non_trigger_fixture(
     ))
 }
 
+fn seed_eval_fixtures(root: &Path, force: bool) -> Result<String> {
+    let sample_root = root.join("eval/fixtures/builtins");
+    let mut seeded_pairs = 0usize;
+    let mut sample_files = 0usize;
+    for fixture in BUILTIN_EVAL_FIXTURES {
+        let signal_dir = sample_root.join(fixture.signal);
+        let failure_source = signal_dir.join(fixture.failure_file);
+        let non_trigger_source = signal_dir.join(fixture.non_trigger_file);
+        let failure_existed = failure_source.exists();
+        let non_trigger_existed = non_trigger_source.exists();
+
+        write_text(&failure_source, fixture.failure_text, force)?;
+        write_text(&non_trigger_source, fixture.non_trigger_text, force)?;
+
+        if force || !failure_existed {
+            sample_files += 1;
+        }
+        if force || !non_trigger_existed {
+            sample_files += 1;
+        }
+
+        seed_failure_fixture_record(root, fixture, &failure_source, force)?;
+        seed_non_trigger_fixture_record(root, fixture, &non_trigger_source, force)?;
+        seeded_pairs += 1;
+    }
+
+    let mut out = String::new();
+    out.push_str("# Eval Fixtures Seeded\n\n");
+    let _ = writeln!(out, "- fixture_pairs: {seeded_pairs}");
+    let _ = writeln!(out, "- sample_files_written: {sample_files}");
+    let _ = writeln!(
+        out,
+        "- source_dir: `{}`",
+        display_relative(root, &sample_root)
+    );
+    out.push_str(
+        "- boundary: built-in regression coverage only; not a writing capability result.\n\n",
+    );
+    out.push_str(&eval_fixture_coverage_report(root)?);
+    Ok(out)
+}
+
+fn seed_failure_fixture_record(
+    root: &Path,
+    fixture: &BuiltInEvalFixture,
+    source_path: &Path,
+    force: bool,
+) -> Result<()> {
+    let text = read_required(source_path)?;
+    let fixture_id = format!("builtin-{}", fixture.signal);
+    let fixture_dir = root
+        .join("eval/failures")
+        .join(fixture.failure_kind.as_str());
+    let fixture_path = fixture_dir.join(format!("{fixture_id}.json"));
+    let record = serde_json::json!({
+        "schema_version": 1,
+        "fixture_id": fixture_id,
+        "kind": fixture.failure_kind.as_str(),
+        "chapter": fixture.chapter,
+        "source": display_relative(root, source_path),
+        "collected_at": "builtin",
+        "expected_signal": fixture.signal,
+        "expected_revision": fixture.expected_revision,
+        "note": fixture.failure_note,
+        "text": text,
+        "validation_boundary": "Regression fixture only; does not prove real reader quality or million-word stability."
+    });
+    write_text(
+        &fixture_path,
+        &serde_json::to_string_pretty(&record)
+            .context("failed to encode built-in failure fixture")?,
+        force,
+    )
+}
+
+fn seed_non_trigger_fixture_record(
+    root: &Path,
+    fixture: &BuiltInEvalFixture,
+    source_path: &Path,
+    force: bool,
+) -> Result<()> {
+    let text = read_required(source_path)?;
+    let fixture_id = format!("builtin-{}", fixture.signal);
+    let fixture_dir = root.join("eval/fixtures/non_trigger");
+    let fixture_path = fixture_dir.join(format!("{fixture_id}.json"));
+    let record = serde_json::json!({
+        "schema_version": 1,
+        "fixture_id": fixture_id,
+        "kind": "non_trigger",
+        "signal": fixture.signal,
+        "source": display_relative(root, source_path),
+        "collected_at": "builtin",
+        "note": fixture.non_trigger_note,
+        "text": text,
+        "validation_boundary": "Negative-control regression fixture only; does not prove real reader quality."
+    });
+    write_text(
+        &fixture_path,
+        &serde_json::to_string_pretty(&record)
+            .context("failed to encode built-in non-trigger fixture")?,
+        force,
+    )
+}
+
 fn eval_fixture_coverage_report(root: &Path) -> Result<String> {
     let mut positives = BTreeMap::<String, usize>::new();
     let failures_dir = root.join("eval/failures");
@@ -8884,14 +9099,7 @@ fn eval_fixture_coverage_report(root: &Path) -> Result<String> {
         .chain(negatives.keys())
         .cloned()
         .collect::<BTreeSet<_>>();
-    for signal in [
-        "xianxia_resource_anchor",
-        "xianxia_combat_knowledge_loop",
-        "xianxia_dialogue_voice",
-        "xianxia_worldbuilding_action",
-        "xianxia_emotion_texture",
-        "anchor_carry",
-    ] {
+    for signal in DEFAULT_EVAL_SIGNALS {
         signals.insert(signal.to_string());
     }
 
@@ -15653,6 +15861,54 @@ mod tests {
             report.contains("xianxia_resource_anchor: failures 1, non_triggers 1, status covered")
         );
         assert!(report.contains("not a writing capability result"));
+    }
+
+    #[test]
+    fn eval_seed_creates_builtin_failure_and_non_trigger_pairs() {
+        let tmp = TempDir::new().expect("temp dir");
+        init_project(
+            tmp.path(),
+            Some("种子夹具".to_string()),
+            Some("玄幻仙侠".to_string()),
+            None,
+            500_000,
+            "zh-CN".to_string(),
+            false,
+        )
+        .expect("init project");
+
+        let report = seed_eval_fixtures(tmp.path(), false).expect("seed fixtures");
+
+        assert!(report.contains("# Eval Fixtures Seeded"));
+        assert!(report.contains("fixture_pairs: 6"));
+        for signal in [
+            "style_ai_opening",
+            "xianxia_resource_anchor",
+            "xianxia_dialogue_voice",
+            "xianxia_combat_knowledge_loop",
+            "viewpoint_inner_state_boundary",
+            "revision_voice_loss",
+        ] {
+            assert!(
+                report.contains(&format!(
+                    "{signal}: failures 1, non_triggers 1, status covered"
+                )),
+                "missing covered signal {signal} in:\n{report}"
+            );
+            assert!(
+                tmp.path()
+                    .join("eval/fixtures/builtins")
+                    .join(signal)
+                    .is_dir(),
+                "missing built-in sample dir for {signal}"
+            );
+        }
+
+        let second_report = seed_eval_fixtures(tmp.path(), false).expect("seed fixtures again");
+        assert!(second_report.contains("sample_files_written: 0"));
+        assert!(
+            second_report.contains("style_ai_opening: failures 1, non_triggers 1, status covered")
+        );
     }
 
     #[test]
